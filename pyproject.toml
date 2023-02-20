@@ -1,0 +1,20 @@
+[tool.poetry]
+name = "2023chargedup"
+version = "0.1.0"
+description = ""
+authors = ["Ethan Wall <ewall25@jesuittampa.org>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "~3.11"
+robotpy = {extras = ["commands2", "ctre", "photonvision", "rev"], version = "^2023.3.2.1"}
+robotpy-apriltag = "^2023.3.2.1"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+
+[tool.black]
+line-length = 120
