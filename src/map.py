@@ -131,9 +131,9 @@ class AutoConstants:
 
 
 class ArmJointConstants:
+    RELATIVE_POSITION = Translation3d(0, 0, 0)
+
     LEADER_MOTOR_PORT = 1
     FOLLOWER_MOTOR_PORT = 2
 
 
-class ArmTelescopeConstants:
-    pass
