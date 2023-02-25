@@ -1,3 +1,7 @@
+import json
+import math
+import pathlib
+
 import commands2
 import wpilib
 import wpimath.controller
@@ -5,6 +9,48 @@ from wpimath.geometry import Translation2d
 
 import swervelib
 from map import AutoConstants
+from swervelib import u
+
+
+class VisualizeTargetCommand(commands2.CommandBase):
+    def __init__(self, swerve: swervelib.Swerve):
+        commands2.CommandBase.__init__(self)
+
+        self.swerve = swerve
+        wpilib.SmartDashboard.putNumber("Target Gauge", 0)
+        wpilib.SmartDashboard.putString("Tracking Target", "None")
+
+        # Load the targets on the field from a JSON file
+        file_path = pathlib.Path(__file__).resolve().parent / "resources" / "field_elements.json"
+        with open(file_path, "r") as f:
+            data = json.load(f)
+            unit = u.parse_expression(data["unit"])
+            self.TARGETS = {
+                k: wpimath.geometry.Translation2d((v[0] * unit).m_as(u.m), (v[1] * unit).m_as(u.m))
+                for (k, v) in data["elements"].items()
+            }
+            print(self.TARGETS)
+
+    def execute(self) -> None:
+        # Determine which target to track by picking the closest one
+        robot_translation = self.swerve.pose.translation()
+        nearest = self.nearest(robot_translation, self.TARGETS)
+
+        # Clamp/multiply the distance value to get a value between -1 and 1
+        display_distance = clamp(nearest[2], -1, 1)
+
+        # Display that value as a number on SmartDashboard
+        wpilib.SmartDashboard.putNumber("Target Gauge", display_distance)
+        wpilib.SmartDashboard.putString("Tracking Target", nearest[0])
+
+    @staticmethod
+    def nearest(translation: Translation2d, elements: dict[str, Translation2d]) -> (str, Translation2d, float):
+        nearest = ("None", Translation2d(), math.inf)
+        for (name, other_translation) in elements.items():
+            distance = translation.distance(other_translation)
+            if distance < nearest[2]:
+                nearest = (name, other_translation, distance)
+        return nearest
 
 
 class BalanceCommand(commands2.CommandBase):

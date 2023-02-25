@@ -3,7 +3,7 @@ import wpilib
 import wpimath.trajectory
 import wpimath.geometry
 
-from commands import BalanceCommand
+from commands import BalanceCommand, VisualizeTargetCommand
 from swervelib import Swerve
 
 from map import DrivetrainConstants, VISION_PARAMS
@@ -18,7 +18,11 @@ class RobotContainer:
 
         # Subsystems represent self-contained parts of the robot (e.g. the drivetrain, arm, winch)
         # Subsystems expose Commands that can be arranged to make the robot run
-        self.swerve = Swerve(DrivetrainConstants.SWERVE_MODULE_PARAMS, DrivetrainConstants.SWERVE_PARAMS, VISION_PARAMS)
+        self.swerve = Swerve(
+            DrivetrainConstants.SWERVE_MODULE_PARAMS,
+            DrivetrainConstants.SWERVE_PARAMS,
+            VISION_PARAMS,
+        )
 
         # Joysticks are plugged into the driver laptop and used during the teleop period to control the robot
         # Each joystick is plugged into a port, ranging from 0 to 5
@@ -33,7 +37,7 @@ class RobotContainer:
                 self.driver_stick.turn,
                 DrivetrainConstants.FIELD_RELATIVE,
                 DrivetrainConstants.OPEN_LOOP,
-            )
+            ).alongWith(VisualizeTargetCommand(self.swerve))
         )
 
         # Bind buttons to Commands
@@ -54,13 +58,16 @@ class RobotContainer:
     def configure_button_bindings(self):
         """Bind buttons on the Xbox controllers to run Commands"""
         self.driver_stick.balance.whileTrue(BalanceCommand(self.swerve))
-        self.driver_stick.reset_gyro.onTrue(commands2.InstantCommand(self.swerve.zero_heading))
+        self.driver_stick.reset_gyro.onTrue(
+            commands2.InstantCommand(self.swerve.zero_heading)
+        )
 
     def get_autonomous_command(self) -> commands2.Command:
         return self.chooser.getSelected()
 
     def add_autonomous_routines(self):
         """Add routines to the autonomous picker"""
+        """
         trajectory = wpimath.trajectory.TrajectoryGenerator.generateTrajectory(
             wpimath.geometry.Pose2d(0, 0, 0),
             [],
@@ -69,3 +76,4 @@ class RobotContainer:
         )
         constraints = wpimath.trajectory.TrapezoidProfileRadians.Constraints(2, 4)
         self.chooser.setDefaultOption("Trajectory Test", self.swerve.follow_trajectory_command(trajectory, True, constraints))
+        """
