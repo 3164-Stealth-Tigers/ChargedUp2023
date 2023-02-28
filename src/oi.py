@@ -49,7 +49,13 @@ class DriverActionSet(Protocol):
 
 
 class OperatorActionSet(Protocol):
-    pass
+    @abstractmethod
+    def pivot(self) -> float:
+        "The power to the pivot motors, from -1 to 1"
+
+    @abstractmethod
+    def extend(self) -> float:
+        "The power to the winch motor, from -1 to 1"
 
 
 # Control schemes
@@ -77,7 +83,7 @@ class XboxDriver(DriverActionSet):
         """The robot's movement around the Z axis, controlled by moving the right joystick left and right.
         From -1 to 1, CCW+
         """
-        return -self.stick.getRightX() * .5
+        return -self.stick.getRightX() * 0.5
 
     @property
     def balance(self) -> Trigger:
@@ -89,4 +95,17 @@ class XboxDriver(DriverActionSet):
 
 
 class XboxOperator(OperatorActionSet):
-    pass
+    "Operate the arm with an Xbox controller"
+
+    def __init__(self, port: int):
+        """Construct an XboxOperator
+
+        :param port: The port that the joystick is plugged into. Reported on the Driver Station
+        """
+        self.stick = CommandXboxController(port)
+
+    def pivot(self) -> float:
+        return -self.stick.getLeftY()
+
+    def extend(self) -> float:
+        return -self.stick.getRightY()

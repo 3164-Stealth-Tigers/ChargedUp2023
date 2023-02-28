@@ -125,6 +125,13 @@ VISION_PARAMS = VisionParameters(
 )
 
 
+class RobotDimensions:
+    PIVOT_TO_FLOOR = (15 * u.inch).m_as(u.m)
+    PIVOT_TO_MAX_VERTICAL_EXTENSION = (63 * u.inch).m_as(u.m)
+    PIVOT_TO_MAX_HORIZONTAL_EXTENSION = (63 * u.inch).m_as(u.m)
+    MAX_EXTENSION_FROM_PIVOT = (0 * u.inch).m_as(u.m)
+
+
 class AutoConstants:
     BALANCE_kP = -1
     BALANCE_MAX_EFFORT = 1
@@ -137,3 +144,5 @@ class ArmJointConstants:
     FOLLOWER_MOTOR_PORT = 2
 
 
+class WinchConstants:
+    MOTOR_PORT = 3

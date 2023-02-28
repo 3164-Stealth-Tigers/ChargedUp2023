@@ -5,10 +5,12 @@ import pathlib
 import commands2
 import wpilib
 import wpimath.controller
-from wpimath.geometry import Translation2d
+from wpimath.geometry import Translation2d, Translation3d
 
 import swervelib
 from map import AutoConstants
+from subsystems import arm
+from subsystems.arm import ArmStructure
 from swervelib import u
 
 
@@ -53,6 +55,18 @@ class VisualizeTargetCommand(commands2.CommandBase):
         return nearest
 
 
+"""
+Single or multiple axis positional control with driver control on the leftover axis(es)
+
+Use the drive() function in closed loop and field relative mode. Run a PID loop for each axis that I want to use positional control on.
+Feed the result of each PID loop into the appropriate parameter of the drive() function. For the remaining axis,
+feed in the joystick value as done in TeleopCommand.
+
+I will be running a positional PID loop to figure out the desired velocity of the entire robot in one or more directions.
+Then, the drive() function will fuse those results together.
+"""
+
+
 class BalanceCommand(commands2.CommandBase):
     def __init__(self, swerve: swervelib.Swerve):
         commands2.CommandBase.__init__(self)
@@ -72,6 +86,25 @@ class BalanceCommand(commands2.CommandBase):
 
     def end(self, interrupted: bool) -> None:
         self.swerve.drive(Translation2d(0, 0), 0, False, True)
+
+
+class ReachTargetCommand(commands2.CommandBase):
+    def __init__(self, target: Translation3d, swerve: swervelib.Swerve, arm_: ArmStructure):
+        commands2.CommandBase.__init__(self)
+
+        self.target = target
+        self.swerve = swerve
+        self.arm = arm_
+
+    def execute(self) -> None:
+        robot_translation = self.swerve.pose.translation()
+        robot_translation = Translation3d(robot_translation.x, robot_translation.y, 0)
+
+        desired_arm_angle = arm.angle_to(self.target, robot_translation)
+        desired_extension = arm.extension_to(self.target, desired_arm_angle, robot_translation)
+
+        self.arm.rotate_to(desired_arm_angle)
+        self.arm.extend(desired_extension)
 
 
 def clamp(num, max_value, min_value):

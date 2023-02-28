@@ -1,13 +1,12 @@
 import commands2.button
 import wpilib
-import wpimath.trajectory
-import wpimath.geometry
 
 from commands import BalanceCommand, VisualizeTargetCommand
+from subsystems.arm import ArmStructure
 from swervelib import Swerve
 
 from map import DrivetrainConstants, VISION_PARAMS
-from oi import XboxDriver
+from oi import XboxDriver, XboxOperator
 
 
 class RobotContainer:
@@ -23,10 +22,12 @@ class RobotContainer:
             DrivetrainConstants.SWERVE_PARAMS,
             VISION_PARAMS,
         )
+        self.arm = ArmStructure()
 
         # Joysticks are plugged into the driver laptop and used during the teleop period to control the robot
         # Each joystick is plugged into a port, ranging from 0 to 5
         self.driver_stick = XboxDriver(0)
+        self.operator_stick = XboxOperator(1)
 
         # Default commands run whenever no other commands are scheduled
         # This included the teleop period, so code for teleop control should be set as the default command
@@ -38,6 +39,13 @@ class RobotContainer:
                 DrivetrainConstants.FIELD_RELATIVE,
                 DrivetrainConstants.OPEN_LOOP,
             ).alongWith(VisualizeTargetCommand(self.swerve))
+        )
+
+        self.arm.setDefaultCommand(
+            self.arm.manual_command(
+                self.operator_stick.pivot,
+                self.operator_stick.extend,
+            )
         )
 
         # Bind buttons to Commands
@@ -58,9 +66,7 @@ class RobotContainer:
     def configure_button_bindings(self):
         """Bind buttons on the Xbox controllers to run Commands"""
         self.driver_stick.balance.whileTrue(BalanceCommand(self.swerve))
-        self.driver_stick.reset_gyro.onTrue(
-            commands2.InstantCommand(self.swerve.zero_heading)
-        )
+        self.driver_stick.reset_gyro.onTrue(commands2.InstantCommand(self.swerve.zero_heading))
 
     def get_autonomous_command(self) -> commands2.Command:
         return self.chooser.getSelected()
