@@ -41,11 +41,11 @@ class RobotContainer:
             ).alongWith(VisualizeTargetCommand(self.swerve))
         )
 
-        self.arm.setDefaultCommand(
-            self.arm.manual_command(
-                self.operator_stick.pivot,
-                self.operator_stick.extend,
-            )
+        self.arm.pivot.setDefaultCommand(
+            self.arm.manual_pivot_command(self.operator_stick.pivot),
+        )
+        self.arm.winch.setDefaultCommand(
+            self.arm.manual_winch_command(self.operator_stick.extend),
         )
 
         # Bind buttons to Commands

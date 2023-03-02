@@ -96,6 +96,8 @@ class ReachTargetCommand(commands2.CommandBase):
         self.swerve = swerve
         self.arm = arm_
 
+        self.addRequirements([swerve, arm_])
+
     def execute(self) -> None:
         robot_translation = self.swerve.pose.translation()
         robot_translation = Translation3d(robot_translation.x, robot_translation.y, 0)
@@ -103,8 +105,8 @@ class ReachTargetCommand(commands2.CommandBase):
         desired_arm_angle = arm.angle_to(self.target, robot_translation)
         desired_extension = arm.extension_to(self.target, desired_arm_angle, robot_translation)
 
-        self.arm.rotate_to(desired_arm_angle)
-        self.arm.extend(desired_extension)
+        self.arm.pivot.rotate_to(desired_arm_angle)
+        self.arm.extend_distance(desired_extension)
 
 
 def clamp(num, max_value, min_value):
