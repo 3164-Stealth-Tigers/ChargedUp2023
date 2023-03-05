@@ -26,25 +26,30 @@ class VisualizeTargetCommand(commands2.CommandBase):
         file_path = pathlib.Path(__file__).resolve().parent / "resources" / "field_elements.json"
         with open(file_path, "r") as f:
             data = json.load(f)
-            unit = u.parse_expression(data["unit"])
+
+            # Parse the unit from the JSON so that we know what unit to convert to metres
+            unit = u.parse_expression(data["Units"])
+
+            # Construct a dictionary with the target's name/ID as the key and a tuple containing x and y as the value
+            # Convert to metres
             self.TARGETS = {
-                k: wpimath.geometry.Translation2d((v[0] * unit).m_as(u.m), (v[1] * unit).m_as(u.m))
-                for (k, v) in data["elements"].items()
+                k: wpimath.geometry.Translation2d((v["x"] * unit).m_as(u.m), (v["y"] * unit).m_as(u.m))
+                for (k, v) in data["FieldElements"].items()
             }
 
     def execute(self) -> None:
         # Determine which target to track by picking the closest one
         robot_translation = self.swerve.pose.translation()
-        # wpilib.SmartDashboard.putString("Pose", f"x: {robot_translation.x}, y: {robot_translation.y}")
         nearest = self.nearest(robot_translation, self.TARGETS)
 
         # Clamp/multiply the distance value to get a value between -1 and 1
         display_distance = clamp(nearest[2], -1, 1)
 
         # Display that value as a number on SmartDashboard
-        wpilib.SmartDashboard.putNumber("Target Gauge", display_distance)
-        wpilib.SmartDashboard.putNumber("Target Gauge Raw", nearest[2])
+        # TODO: Account for robot dimensions when calculating error from the target
         wpilib.SmartDashboard.putString("Tracking Target", nearest[0])
+        wpilib.SmartDashboard.putNumber("Target Diff (x)", robot_translation.x - nearest[1].x)
+        wpilib.SmartDashboard.putNumber("Target Diff (y)", robot_translation.y - nearest[1].y)
 
     @staticmethod
     def nearest(translation: Translation2d, elements: dict[str, Translation2d]) -> (str, Translation2d, float):

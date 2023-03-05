@@ -1,23 +1,95 @@
 {
-  "unit": "inch",
-  "elements": {
-    "BLUE_GRID_BOTTOM_1": [172.639, 42.386],
-    "BLUE_GRID_MIDDLE_1": [172.639, 64.386],
-    "BLUE_GRID_TOP_1": [172.639, 108.386],
-    "BLUE_GRID_BOTTOM_2": [172.639, 108.386],
-    "BLUE_GRID_MIDDLE_2": [172.639, 130.386],
-    "BLUE_GRID_TOP_2": [172.639, 152.386],
-    "BLUE_GRID_BOTTOM_3": [172.639, 174.386],
-    "BLUE_GRID_MIDDLE_3": [172.639, 196.386],
-    "BLUE_GRID_TOP_3": [172.639, 218.386],
-    "RED_GRID_BOTTOM_1": [715.361, 42.386],
-    "RED_GRID_MIDDLE_1": [715.361, 64.386],
-    "RED_GRID_TOP_1": [715.361, 108.386],
-    "RED_GRID_BOTTOM_2": [715.361, 108.386],
-    "RED_GRID_MIDDLE_2": [715.361, 130.386],
-    "RED_GRID_TOP_2": [715.361, 152.386],
-    "RED_GRID_BOTTOM_3": [715.361, 174.386],
-    "RED_GRID_MIDDLE_3": [715.361, 196.386],
-    "RED_GRID_TOP_3": [715.361, 218.386]
+  "Units": "inch",
+  "FieldElements": {
+    "Blue1Bottom": {
+      "GamePiece": "Cone",
+      "x": 55.99,
+      "y": 18.45
+    },
+    "Blue1Mid": {
+      "GamePiece": "Cube",
+      "x": 55.99,
+      "y": 40.45
+    },
+    "Blue1Top": {
+      "GamePiece": "Cone",
+      "x": 55.99,
+      "y": 62.45
+    },
+    "Blue2Bottom": {
+      "GamePiece": "Cone",
+      "x": 55.99,
+      "y": 84.343
+    },
+    "Blue2Mid": {
+      "GamePiece": "Cube",
+      "x": 55.99,
+      "y": 106.45
+    },
+    "Blue2Top": {
+      "GamePiece": "Cone",
+      "x": 55.99,
+      "y": 128.45
+    },
+    "Blue3Bottom": {
+      "GamePiece": "Cone",
+      "x": 55.99,
+      "y": 150.45
+    },
+    "Blue3Mid": {
+      "GamePiece": "Cube",
+      "x": 55.99,
+      "y": 172.45
+    },
+    "Blue3Top": {
+      "GamePiece": "Cone",
+      "x": 55.99,
+      "y": 194.45
+    },
+    "Red1Bottom": {
+      "GamePiece": "Cone",
+      "x": 598.713,
+      "y": 18.45
+    },
+    "Red1Mid": {
+      "GamePiece": "Cube",
+      "x": 598.713,
+      "y": 40.45
+    },
+    "Red1Top": {
+      "GamePiece": "Cone",
+      "x": 598.713,
+      "y": 62.45
+    },
+    "Red2Bottom": {
+      "GamePiece": "Cone",
+      "x": 598.713,
+      "y": 84.343
+    },
+    "Red2Mid": {
+      "GamePiece": "Cube",
+      "x": 598.713,
+      "y": 106.45
+    },
+    "Red2Top": {
+      "GamePiece": "Cone",
+      "x": 598.713,
+      "y": 128.45
+    },
+    "Red3Bottom": {
+      "GamePiece": "Cone",
+      "x": 598.713,
+      "y": 150.45
+    },
+    "Red3Mid": {
+      "GamePiece": "Cube",
+      "x": 598.713,
+      "y": 172.45
+    },
+    "Red3Top": {
+      "GamePiece": "Cone",
+      "x": 598.713,
+      "y": 194.45
+    }
   }
 }
