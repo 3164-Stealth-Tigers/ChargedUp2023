@@ -31,11 +31,11 @@ class VisualizeTargetCommand(commands2.CommandBase):
                 k: wpimath.geometry.Translation2d((v[0] * unit).m_as(u.m), (v[1] * unit).m_as(u.m))
                 for (k, v) in data["elements"].items()
             }
-            print(self.TARGETS)
 
     def execute(self) -> None:
         # Determine which target to track by picking the closest one
         robot_translation = self.swerve.pose.translation()
+        # wpilib.SmartDashboard.putString("Pose", f"x: {robot_translation.x}, y: {robot_translation.y}")
         nearest = self.nearest(robot_translation, self.TARGETS)
 
         # Clamp/multiply the distance value to get a value between -1 and 1
@@ -43,6 +43,7 @@ class VisualizeTargetCommand(commands2.CommandBase):
 
         # Display that value as a number on SmartDashboard
         wpilib.SmartDashboard.putNumber("Target Gauge", display_distance)
+        wpilib.SmartDashboard.putNumber("Target Gauge Raw", nearest[2])
         wpilib.SmartDashboard.putString("Tracking Target", nearest[0])
 
     @staticmethod

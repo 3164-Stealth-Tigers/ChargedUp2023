@@ -6,7 +6,7 @@ import commands2
 import rev
 from wpimath.geometry import Rotation2d, Translation3d
 
-from map import ArmJointConstants, WinchConstants, RobotDimensions
+from map import PivotConstants, WinchConstants, RobotDimensions
 
 """
 Possible ideas for counteracting gravity:
@@ -15,6 +15,7 @@ Possible ideas for counteracting gravity:
 """
 
 # TODO: Figure out structure for arm code. I.e., how should I split up the pivot and winch?
+# TODO: Make the arm stow itself
 
 
 class ArmPivot(commands2.SubsystemBase):
@@ -23,27 +24,48 @@ class ArmPivot(commands2.SubsystemBase):
     def __init__(self):
         commands2.SubsystemBase.__init__(self)
 
-        self.leader = rev.CANSparkMax(ArmJointConstants.LEADER_MOTOR_PORT, rev.CANSparkMax.MotorType.kBrushless)
+        self._setpoint = None
+
+        self.leader = rev.CANSparkMax(PivotConstants.LEADER_MOTOR_PORT, rev.CANSparkMax.MotorType.kBrushless)
         self.controller = self.leader.getPIDController()
         self.encoder = self.leader.getEncoder()
-        self.follower = rev.CANSparkMax(ArmJointConstants.FOLLOWER_MOTOR_PORT, rev.CANSparkMax.MotorType.kBrushless)
+        self.follower = rev.CANSparkMax(PivotConstants.FOLLOWER_MOTOR_PORT, rev.CANSparkMax.MotorType.kBrushless)
 
         self._config_motors()
 
     def _config_motors(self):
+        self.leader.restoreFactoryDefaults()
+
+        self.controller.setP(0)
+        self.controller.setI(0)
+        self.controller.setD(0)
+        self.controller.setFF(0)
+
+        self.leader.setSmartCurrentLimit(20)
+        self.leader.setSmartCurrentLimit(40)
+
+        self.leader.setIdleMode(rev.CANSparkMax.IdleMode.kBrake)
+
+        self.encoder.setPositionConversionFactor(1)
+        self.encoder.setPosition(0)
+
         self.follower.follow(self.leader)
 
-        # Configure smart motion
-        pass
-
     def rotate_to(self, angle: Rotation2d):
-        self.controller.setReference(angle.degrees(), rev.CANSparkMax.ControlType.kPosition)
+        self._setpoint = angle.degrees()
+        self.controller.setReference(self._setpoint, rev.CANSparkMax.ControlType.kPosition)
 
     def set_power(self, power: float):
         self.leader.set(power)
 
     def reset_angle(self, reference: float = 0):
         self.encoder.setPosition(reference)
+
+    def at_setpoint(self) -> bool:
+        if self._setpoint is None:
+            raise Exception("Setpoint isn't set! Call rotate_to() first.")
+
+        return at_setpoint(self.encoder.getPosition(), self._setpoint, PivotConstants.PID_TOLERANCE)
 
     @property
     def angle(self) -> Rotation2d:
@@ -56,19 +78,41 @@ class ArmWinch(commands2.SubsystemBase):
     def __init__(self):
         commands2.SubsystemBase.__init__(self)
 
+        self._setpoint = None
+
         self.motor = rev.CANSparkMax(WinchConstants.MOTOR_PORT, rev.CANSparkMax.MotorType.kBrushless)
         self.controller = self.motor.getPIDController()
+        self.encoder = self.motor.getEncoder()
 
         self._config_motors()
 
     def _config_motors(self):
-        pass
+        self.motor.restoreFactoryDefaults()
+
+        self.controller.setP(0)
+        self.controller.setI(0)
+        self.controller.setD(0)
+        self.controller.setFF(0)
+
+        self.motor.setSmartCurrentLimit(20)
+
+        self.motor.setIdleMode(rev.CANSparkMax.IdleMode.kBrake)
+
+        self.encoder.setPositionConversionFactor(1)
+        self.encoder.setPosition(0)
 
     def extend_distance(self, distance: float):
-        self.controller.setReference(distance, rev.CANSparkMax.ControlType.kPosition)
+        self._setpoint = distance
+        self.controller.setReference(self._setpoint, rev.CANSparkMax.ControlType.kPosition)
 
     def set_power(self, power: float):
         self.motor.set(power)
+
+    def at_setpoint(self) -> bool:
+        if self._setpoint is None:
+            raise Exception("Setpoint isn't set! Call rotate_to() first.")
+
+        return at_setpoint(self.encoder.getPosition(), self._setpoint, WinchConstants.PID_TOLERANCE)
 
 
 class ArmStructure(commands2.SubsystemBase):
@@ -91,6 +135,14 @@ class ArmStructure(commands2.SubsystemBase):
 
         self.winch.extend_distance(limited_extension)
 
+    def stow(self):
+        """Command the arm to rotate upright and extend as far in as possible."""
+
+        self.extend_distance(0)
+
+        # 90 degrees is upright
+        self.pivot.rotate_to(Rotation2d.fromDegrees(90))
+
     def manual_winch_command(self, power: Callable[[], float]):
         return commands2.RunCommand(lambda: self.winch.set_power(power()), self.winch)
 
@@ -99,7 +151,7 @@ class ArmStructure(commands2.SubsystemBase):
 
 
 def angle_to(target: Translation3d, robot_translation: Translation3d) -> Rotation2d:
-    global_arm_translation = robot_translation + ArmJointConstants.RELATIVE_POSITION
+    global_arm_translation = robot_translation + PivotConstants.RELATIVE_POSITION
     xy_distance = global_arm_translation.toTranslation2d().distance(target.toTranslation2d())
     z_distance = abs(target.z - global_arm_translation.z)
     angle = math.atan(z_distance / xy_distance)
@@ -107,7 +159,7 @@ def angle_to(target: Translation3d, robot_translation: Translation3d) -> Rotatio
 
 
 def extension_to(target: Translation3d, angle: Rotation2d, robot_translation: Translation3d) -> float:
-    global_arm_translation = robot_translation + ArmJointConstants.RELATIVE_POSITION
+    global_arm_translation = robot_translation + PivotConstants.RELATIVE_POSITION
     z_distance = abs(target.z - global_arm_translation.z)
     hyp = z_distance / angle.sin()
     return hyp
@@ -118,3 +170,7 @@ def maximum_extension(angle: Rotation2d) -> float:
     to_ceiling = abs(RobotDimensions.PIVOT_TO_MAX_VERTICAL_EXTENSION / (angle - Rotation2d.fromDegrees(90)).cos())
     to_floor = abs(RobotDimensions.PIVOT_TO_FLOOR / (Rotation2d.fromDegrees(360) - angle).sin())
     return min(horizontal, to_ceiling, to_floor, RobotDimensions.MAX_EXTENSION_FROM_PIVOT)
+
+
+def at_setpoint(reference: float, setpoint: float, tolerance: float) -> bool:
+    return setpoint - tolerance <= reference <= setpoint + tolerance

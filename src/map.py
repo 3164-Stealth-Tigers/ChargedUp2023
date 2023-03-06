@@ -137,12 +137,21 @@ class AutoConstants:
     BALANCE_MAX_EFFORT = 1
 
 
-class ArmJointConstants:
+class PivotConstants:
     RELATIVE_POSITION = Translation3d(0, 0, 0)
 
     LEADER_MOTOR_PORT = 1
     FOLLOWER_MOTOR_PORT = 2
 
+    PID_TOLERANCE = 2
+
 
 class WinchConstants:
     MOTOR_PORT = 3
+
+    PID_TOLERANCE = (1 * u.inch).m_as(u.m)
+
+
+class ClawConstants:
+    MOTOR_PORT = 4
+    ANALOG_DISTANCE_SENSOR_PORT = 0

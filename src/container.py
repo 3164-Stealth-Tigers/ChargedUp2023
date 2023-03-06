@@ -3,6 +3,7 @@ import wpilib
 
 from commands import BalanceCommand, VisualizeTargetCommand
 from subsystems.arm import ArmStructure
+from subsystems.claw import Claw
 from swervelib import Swerve
 
 from map import DrivetrainConstants, VISION_PARAMS
@@ -23,6 +24,7 @@ class RobotContainer:
             VISION_PARAMS,
         )
         self.arm = ArmStructure()
+        self.claw = Claw()
 
         # Joysticks are plugged into the driver laptop and used during the teleop period to control the robot
         # Each joystick is plugged into a port, ranging from 0 to 5

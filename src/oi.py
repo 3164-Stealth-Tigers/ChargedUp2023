@@ -51,11 +51,49 @@ class DriverActionSet(Protocol):
 class OperatorActionSet(Protocol):
     @abstractmethod
     def pivot(self) -> float:
-        "The power to the pivot motors, from -1 to 1"
+        """The power to the pivot motors, from -1 to 1"""
+        raise NotImplementedError
 
     @abstractmethod
     def extend(self) -> float:
-        "The power to the winch motor, from -1 to 1"
+        """The power to the winch motor, from -1 to 1"""
+        raise NotImplementedError
+
+    @property
+    @abstractmethod
+    def reach_high(self) -> Trigger:
+        """Button to move the arm to the high goal"""
+        raise NotImplementedError
+
+    @property
+    @abstractmethod
+    def reach_mid(self) -> Trigger:
+        """Button to move the arm to the middle goal"""
+        raise NotImplementedError
+
+    @property
+    @abstractmethod
+    def reach_low(self) -> Trigger:
+        """Button to move the arm to the low goal"""
+        raise NotImplementedError
+
+    @property
+    @abstractmethod
+    def stow(self) -> Trigger:
+        "Button to rotate the arm upward and extend it to its minimum length"
+        raise NotImplementedError
+
+    @property
+    @abstractmethod
+    def intake(self) -> Trigger:
+        """Hold button to intake"""
+        raise NotImplementedError
+
+    @property
+    @abstractmethod
+    def outtake(self) -> Trigger:
+        """Hold button to outtake"""
+        raise NotImplementedError
 
 
 # Control schemes
@@ -109,3 +147,27 @@ class XboxOperator(OperatorActionSet):
 
     def extend(self) -> float:
         return -self.stick.getRightY()
+
+    @property
+    def reach_high(self) -> Trigger:
+        return self.stick.Y()
+
+    @property
+    def reach_mid(self) -> Trigger:
+        return self.stick.B()
+
+    @property
+    def reach_low(self) -> Trigger:
+        return self.stick.A()
+
+    @property
+    def stow(self) -> Trigger:
+        return self.stick.X()
+
+    @property
+    def intake(self) -> Trigger:
+        return self.stick.leftBumper()
+
+    @property
+    def outtake(self) -> Trigger:
+        return self.stick.rightBumper()
