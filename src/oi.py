@@ -12,6 +12,7 @@ Any special logic (e.g. inverting the Y axis on a joystick) is also defined in a
 from typing import Protocol
 from abc import abstractmethod
 
+import commands2
 import wpilib
 from commands2 import Trigger
 from commands2.button import CommandXboxController, JoystickButton
@@ -95,6 +96,18 @@ class OperatorActionSet(Protocol):
         """Hold button to outtake"""
         raise NotImplementedError
 
+    @property
+    @abstractmethod
+    def cycle_next_height(self) -> Trigger:
+        """Choose the next arm height"""
+        raise NotImplementedError
+
+    @property
+    @abstractmethod
+    def cycle_previous_height(self) -> Trigger:
+        """Choose the previous arm height"""
+        raise NotImplementedError
+
 
 # Control schemes
 
@@ -141,24 +154,25 @@ class XboxOperator(OperatorActionSet):
         :param port: The port that the joystick is plugged into. Reported on the Driver Station
         """
         self.stick = CommandXboxController(port)
+        self.loop = commands2.CommandScheduler.getInstance().getDefaultButtonLoop()
 
     def pivot(self) -> float:
-        return -self.stick.getLeftY()
+        return self.stick.getRightBumper() - self.stick.getLeftBumper()
 
     def extend(self) -> float:
-        return -self.stick.getRightY()
+        return -self.stick.getLeftY()
 
     @property
     def reach_high(self) -> Trigger:
-        return self.stick.Y()
+        return Trigger()
 
     @property
     def reach_mid(self) -> Trigger:
-        return self.stick.B()
+        return Trigger()
 
     @property
     def reach_low(self) -> Trigger:
-        return self.stick.A()
+        return Trigger()
 
     @property
     def stow(self) -> Trigger:
@@ -166,8 +180,16 @@ class XboxOperator(OperatorActionSet):
 
     @property
     def intake(self) -> Trigger:
-        return self.stick.leftBumper()
+        return self.stick.A()
 
     @property
     def outtake(self) -> Trigger:
-        return self.stick.rightBumper()
+        return self.stick.B()
+
+    @property
+    def cycle_next_height(self) -> Trigger:
+        return Trigger(self.stick.POVUp(self.loop).getAsBoolean)
+
+    @property
+    def cycle_previous_height(self) -> Trigger:
+        return Trigger(self.stick.POVDown(self.loop).getAsBoolean)

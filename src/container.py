@@ -1,7 +1,8 @@
 import commands2.button
 import wpilib
+import wpimath.geometry
 
-from commands import BalanceCommand, VisualizeTargetCommand
+from commands import BalanceCommand, VisualizeTargetCommand, CycleCommand, ReachTargetCommand
 from subsystems.arm import ArmStructure
 from subsystems.claw import Claw
 from swervelib import Swerve
@@ -43,12 +44,13 @@ class RobotContainer:
             ).alongWith(VisualizeTargetCommand(self.swerve))
         )
 
-        self.arm.pivot.setDefaultCommand(
-            self.arm.manual_pivot_command(self.operator_stick.pivot),
+        self.arm_cycle_cmd = CycleCommand(
+            commands2.PrintCommand("low"),
+            commands2.PrintCommand("medium"),
+            commands2.PrintCommand("high"),
         )
-        self.arm.winch.setDefaultCommand(
-            self.arm.manual_winch_command(self.operator_stick.extend),
-        )
+        self.arm_cycle_cmd.addRequirements(self.arm)
+        self.arm.setDefaultCommand(self.arm_cycle_cmd)
 
         # Bind buttons to Commands
         self.configure_button_bindings()
@@ -69,6 +71,22 @@ class RobotContainer:
         """Bind buttons on the Xbox controllers to run Commands"""
         self.driver_stick.balance.whileTrue(BalanceCommand(self.swerve))
         self.driver_stick.reset_gyro.onTrue(commands2.InstantCommand(self.swerve.zero_heading))
+
+        self.operator_stick.cycle_next_height.onTrue(commands2.InstantCommand(self.arm_cycle_cmd.next))
+        self.operator_stick.cycle_previous_height.onTrue(commands2.InstantCommand(self.arm_cycle_cmd.previous))
+        self.operator_stick.stow.onTrue(
+            commands2.InstantCommand(self.arm.stow).beforeStarting(lambda: print("Stowing arm"))
+        )
+        # fmt: off
+        self.operator_stick.intake \
+            .whileTrue(self.claw.intake_command()) \
+            .onTrue(commands2.PrintCommand("Intaking")) \
+            .onFalse(commands2.PrintCommand("Stopped"))
+        self.operator_stick.outtake \
+            .whileTrue(self.claw.outtake_command()) \
+            .onTrue(commands2.PrintCommand("Outtaking")) \
+            .onFalse(commands2.PrintCommand("Stopped"))
+        # fmt: on
 
     def get_autonomous_command(self) -> commands2.Command:
         return self.chooser.getSelected()
