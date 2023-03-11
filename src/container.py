@@ -1,14 +1,21 @@
 import commands2.button
 import wpilib
 import wpimath.geometry
+import wpimath.trajectory
 
-from commands import BalanceCommand, VisualizeTargetCommand, CycleCommand, ReachTargetCommand
+from commands import (
+    BalanceCommand,
+    VisualizeTargetCommand,
+    CycleCommand,
+    ReachTargetCommand,
+    AlignToGridCommand,
+)
 from subsystems.arm import ArmStructure
 from subsystems.claw import Claw
 from swervelib import Swerve
 
 from map import DrivetrainConstants, VISION_PARAMS
-from oi import XboxDriver, XboxOperator
+from oi import XboxDriver, XboxOperator, LabTestXboxOperator
 
 
 class RobotContainer:
@@ -30,7 +37,7 @@ class RobotContainer:
         # Joysticks are plugged into the driver laptop and used during the teleop period to control the robot
         # Each joystick is plugged into a port, ranging from 0 to 5
         self.driver_stick = XboxDriver(0)
-        self.operator_stick = XboxOperator(1)
+        self.operator_stick = LabTestXboxOperator(1)
 
         # Default commands run whenever no other commands are scheduled
         # This included the teleop period, so code for teleop control should be set as the default command
@@ -48,9 +55,15 @@ class RobotContainer:
             commands2.PrintCommand("low"),
             commands2.PrintCommand("medium"),
             commands2.PrintCommand("high"),
+            run_first_command_on_init=False,
         )
         self.arm_cycle_cmd.addRequirements(self.arm)
-        self.arm.setDefaultCommand(self.arm_cycle_cmd)
+        self.arm.setDefaultCommand(
+            self.arm_cycle_cmd.alongWith(
+                self.arm.manual_pivot_command(self.operator_stick.pivot),
+                self.arm.manual_winch_command(self.operator_stick.extend),
+            )
+        )
 
         # Bind buttons to Commands
         self.configure_button_bindings()
@@ -71,6 +84,14 @@ class RobotContainer:
         """Bind buttons on the Xbox controllers to run Commands"""
         self.driver_stick.balance.whileTrue(BalanceCommand(self.swerve))
         self.driver_stick.reset_gyro.onTrue(commands2.InstantCommand(self.swerve.zero_heading))
+        # TODO: Test on real robot
+        self.driver_stick.align.whileTrue(
+            AlignToGridCommand(
+                self.swerve,
+                wpimath.trajectory.TrajectoryConfig(2, 4),
+                wpimath.trajectory.TrapezoidProfileRadians.Constraints(2, 4),
+            )
+        )
 
         self.operator_stick.cycle_next_height.onTrue(commands2.InstantCommand(self.arm_cycle_cmd.next))
         self.operator_stick.cycle_previous_height.onTrue(commands2.InstantCommand(self.arm_cycle_cmd.previous))

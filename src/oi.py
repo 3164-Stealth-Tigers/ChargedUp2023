@@ -48,6 +48,12 @@ class DriverActionSet(Protocol):
     def reset_gyro(self) -> Trigger:
         raise NotImplementedError
 
+    @property
+    @abstractmethod
+    def align(self) -> Trigger:
+        """Align with the nearest scoring field element"""
+        raise NotImplementedError
+
 
 class OperatorActionSet(Protocol):
     @abstractmethod
@@ -144,9 +150,13 @@ class XboxDriver(DriverActionSet):
     def reset_gyro(self) -> Trigger:
         return self.stick.Y()
 
+    @property
+    def align(self) -> Trigger:
+        return self.stick.Y()
+
 
 class XboxOperator(OperatorActionSet):
-    "Operate the arm with an Xbox controller"
+    """Operate the arm with an Xbox controller"""
 
     def __init__(self, port: int):
         """Construct an XboxOperator
@@ -157,7 +167,7 @@ class XboxOperator(OperatorActionSet):
         self.loop = commands2.CommandScheduler.getInstance().getDefaultButtonLoop()
 
     def pivot(self) -> float:
-        return self.stick.getRightBumper() - self.stick.getLeftBumper()
+        return self.stick.getRightTriggerAxis() - self.stick.getLeftTriggerAxis()
 
     def extend(self) -> float:
         return -self.stick.getLeftY()
@@ -193,3 +203,15 @@ class XboxOperator(OperatorActionSet):
     @property
     def cycle_previous_height(self) -> Trigger:
         return Trigger(self.stick.POVDown(self.loop).getAsBoolean)
+
+
+class LabTestXboxOperator(XboxOperator):
+    def pivot(self) -> float:
+        return deadband(-self.stick.getRightY(), 0.01)
+
+    def extend(self) -> float:
+        return deadband(super().extend(), 0.01)
+
+
+def deadband(value, band):
+    return value if abs(value) > band else 0

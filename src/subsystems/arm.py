@@ -4,6 +4,7 @@ from collections.abc import Callable
 
 import commands2
 import rev
+import wpilib
 from wpimath.geometry import Rotation2d, Translation3d
 
 from map import PivotConstants, WinchConstants, RobotDimensions
@@ -144,10 +145,14 @@ class ArmStructure(commands2.SubsystemBase):
         self.pivot.rotate_to(Rotation2d.fromDegrees(90))
 
     def manual_winch_command(self, power: Callable[[], float]):
-        return commands2.RunCommand(lambda: self.winch.set_power(power()), self.winch)
+        return commands2.RunCommand(lambda: self.winch.set_power(power()), self.winch).alongWith(
+            commands2.RunCommand(lambda: wpilib.SmartDashboard.putNumber("Winch Power", power()))  # type: ignore
+        )
 
     def manual_pivot_command(self, power: Callable[[], float]):
-        return commands2.RunCommand(lambda: self.pivot.set_power(power()), self.pivot)
+        return commands2.RunCommand(lambda: self.pivot.set_power(power()), self.pivot).alongWith(
+            commands2.RunCommand(lambda: wpilib.SmartDashboard.putNumber("Pivot Power", power()))  # type: ignore
+        )
 
 
 def angle_to(target: Translation3d, robot_translation: Translation3d) -> Rotation2d:

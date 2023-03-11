@@ -11,6 +11,9 @@ robotpy = {extras = ["commands2", "ctre", "photonvision", "rev"], version = "^20
 robotpy-apriltag = "^2023.3.2.1"
 
 
+[tool.poetry.group.dev.dependencies]
+mypy = "^1.1.1"
+
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
