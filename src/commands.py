@@ -1,3 +1,4 @@
+import enum
 import functools
 import json
 import math
@@ -8,10 +9,10 @@ import commands2
 import wpilib
 import wpimath.controller
 import wpimath.trajectory
-from wpimath.geometry import Translation2d, Translation3d
+from wpimath.geometry import Translation2d, Translation3d, Pose2d, Rotation2d, Transform2d
 
 import swervelib
-from map import AutoConstants
+from map import AutoConstants, RobotDimensions
 from subsystems import arm
 from subsystems.arm import ArmStructure
 from swervelib import u
@@ -30,8 +31,8 @@ class VisualizeTargetCommand(commands2.CommandBase):
 
     def execute(self) -> None:
         # Determine which target to track by picking the closest one
-        robot_translation = self.swerve.pose.translation()
-        nearest_target = nearest(robot_translation, field_elements())
+        robot_pose = self.swerve.pose
+        nearest_target = nearest(robot_pose, field_elements())
 
         # Clamp/multiply the distance value to get a value between -1 and 1
         display_distance = clamp(nearest_target[2], -1, 1)
@@ -39,8 +40,8 @@ class VisualizeTargetCommand(commands2.CommandBase):
         # Display that value as a number on SmartDashboard
         # TODO: Account for robot dimensions when calculating error from the target
         wpilib.SmartDashboard.putString("Tracking Target", nearest_target[0])
-        wpilib.SmartDashboard.putNumber("Target Diff (x)", robot_translation.x - nearest_target[1].x)
-        wpilib.SmartDashboard.putNumber("Target Diff (y)", robot_translation.y - nearest_target[1].y)
+        wpilib.SmartDashboard.putNumber("Target Diff (x)", robot_pose.x - nearest_target[1].x)
+        wpilib.SmartDashboard.putNumber("Target Diff (y)", robot_pose.y - nearest_target[1].y)
 
 
 """
@@ -95,6 +96,35 @@ class ReachTargetCommand(commands2.CommandBase):
 
         self.arm.pivot.rotate_to(desired_arm_angle)
         self.arm.extend_distance(desired_extension)
+
+
+class ReachNearestTargetCommand(ReachTargetCommand):
+    class TargetHeight(enum.Enum):
+        # Derived from the spreadsheet
+        BOTTOM = Translation3d(0, 0, 0.001)
+        MID = Translation3d((21.87 * u.inch).m_as(u.m), 0, (34.065 * u.inch).m_as(u.m))
+        TOP = Translation3d((38.896 * u.inch).m_as(u.m), 0, (46.065 * u.inch).m_as(u.m))
+
+    def __init__(self, height: TargetHeight, swerve: swervelib.Swerve, arm_: ArmStructure):
+        ReachTargetCommand.__init__(self, Translation3d(), swerve, arm_)
+
+        self.offset = height.value
+
+    def execute(self) -> None:
+        # Acquire the nearest GRID element
+        nearest_element_2d = nearest(self.swerve.pose, field_elements())[1].translation()
+        # TODO: Standardize use of 3d classes around codebase
+        nearest_element_3d = Translation3d(nearest_element_2d.x, nearest_element_2d.y, 0)
+
+        # Offset the target's pose to acquire the bottom, mid, or high pylon's translation
+        # TODO: Translates incorrectly for red elements
+        self.target = nearest_element_3d - self.offset
+        wpilib.SmartDashboard.putString("debug_TARGET_GLOBAL_POS", f"x: {self.target.x}, y: {self.target.y}, z: {self.target.z}")
+        wpilib.SmartDashboard.putString(
+            "CLAW_DESIRED_POSE", f"x: {self.target.x}, y: {self.target.y}, z: {self.target.z}"
+        )
+
+        super().execute()
 
 
 class CycleCommand(commands2.CommandBase):
@@ -169,18 +199,21 @@ class AlignToGridCommand(commands2.CommandBase):
         self.inner_command = commands2.Command()
 
     def initialize(self) -> None:
-        robot_translation = self.swerve.pose.translation()
-        nearest_target = nearest(robot_translation, field_elements())
+        robot_pose = self.swerve.pose
+        nearest_target = nearest(robot_pose, field_elements())
 
-        # Offset the target for the robot's dimensions
-        # TODO: Load robot dimensions
-        target_translation = nearest_target[1] - Translation2d()
+        # Offset the target for the robot's dimensions.
+        # Also, add or subtract depending on which side of the field we're on.
+        # Transform negatively no matter which side of the field the element is on
+        # because the elements are represented as poses with rotations, and a transform is relative to its pose.
+        offset = Transform2d(-RobotDimensions.BASE_LENGTH / 2, 0, 0)
+        target_pose = nearest_target[1].transformBy(offset)
 
         # TODO: Rotate to correct orientation for each target
         trajectory = wpimath.trajectory.TrajectoryGenerator.generateTrajectory(
             self.swerve.pose,
             [],
-            wpimath.geometry.Pose2d(target_translation, wpimath.geometry.Rotation2d(0)),
+            target_pose,
             self.trajectory_config,
         )
         self.swerve.field.getObject("traj").setTrajectory(trajectory)
@@ -201,7 +234,7 @@ class AlignToGridCommand(commands2.CommandBase):
 
 
 @functools.cache
-def field_elements() -> dict[str, wpimath.geometry.Translation2d]:
+def field_elements() -> dict[str, Pose2d]:
     file_path = pathlib.Path(__file__).resolve().parent / "resources" / "field_elements.json"
     with open(file_path, "r") as f:
         data = json.load(f)
@@ -212,18 +245,18 @@ def field_elements() -> dict[str, wpimath.geometry.Translation2d]:
         # Construct a dictionary with the target's name/ID as the key and a tuple containing x and y as the value
         # Convert to metres
         targets = {
-            k: wpimath.geometry.Translation2d((v["x"] * unit).m_as(u.m), (v["y"] * unit).m_as(u.m))
+            k: Pose2d((v["x"] * unit).m_as(u.m), (v["y"] * unit).m_as(u.m), Rotation2d.fromDegrees(v["Rotation"]))
             for (k, v) in data["FieldElements"].items()
         }
         return targets
 
 
-def nearest(translation: Translation2d, elements: dict[str, Translation2d]) -> tuple[str, Translation2d, float]:
-    nearest_target = ("None", Translation2d(), math.inf)
-    for (name, other_translation) in elements.items():
-        distance = translation.distance(other_translation)
+def nearest(reference_pose: Pose2d, elements: dict[str, Pose2d]) -> tuple[str, Pose2d, float]:
+    nearest_target = ("None", Pose2d(), math.inf)
+    for (name, other_pose) in elements.items():
+        distance = reference_pose.translation().distance(other_pose.translation())
         if distance < nearest_target[2]:
-            nearest_target = (name, other_translation, distance)
+            nearest_target = (name, other_pose, distance)
     return nearest_target
 
 

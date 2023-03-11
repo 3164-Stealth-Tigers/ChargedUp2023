@@ -4,92 +4,110 @@
     "Blue1Bottom": {
       "GamePiece": "Cone",
       "x": 55.99,
-      "y": 18.45
+      "y": 18.45,
+      "Rotation": 180
     },
     "Blue1Mid": {
       "GamePiece": "Cube",
       "x": 55.99,
-      "y": 40.45
+      "y": 40.45,
+      "Rotation": 180
     },
     "Blue1Top": {
       "GamePiece": "Cone",
       "x": 55.99,
-      "y": 62.45
+      "y": 62.45,
+      "Rotation": 180
     },
     "Blue2Bottom": {
       "GamePiece": "Cone",
       "x": 55.99,
-      "y": 84.343
+      "y": 84.343,
+      "Rotation": 180
     },
     "Blue2Mid": {
       "GamePiece": "Cube",
       "x": 55.99,
-      "y": 106.45
+      "y": 106.45,
+      "Rotation": 180
     },
     "Blue2Top": {
       "GamePiece": "Cone",
       "x": 55.99,
-      "y": 128.45
+      "y": 128.45,
+      "Rotation": 180
     },
     "Blue3Bottom": {
       "GamePiece": "Cone",
       "x": 55.99,
-      "y": 150.45
+      "y": 150.45,
+      "Rotation": 180
     },
     "Blue3Mid": {
       "GamePiece": "Cube",
       "x": 55.99,
-      "y": 172.45
+      "y": 172.45,
+      "Rotation": 180
     },
     "Blue3Top": {
       "GamePiece": "Cone",
       "x": 55.99,
-      "y": 194.45
+      "y": 194.45,
+      "Rotation": 180
     },
     "Red1Bottom": {
       "GamePiece": "Cone",
       "x": 598.713,
-      "y": 18.45
+      "y": 18.45,
+      "Rotation": 0
     },
     "Red1Mid": {
       "GamePiece": "Cube",
       "x": 598.713,
-      "y": 40.45
+      "y": 40.45,
+      "Rotation": 0
     },
     "Red1Top": {
       "GamePiece": "Cone",
       "x": 598.713,
-      "y": 62.45
+      "y": 62.45,
+      "Rotation": 0
     },
     "Red2Bottom": {
       "GamePiece": "Cone",
       "x": 598.713,
-      "y": 84.343
+      "y": 84.343,
+      "Rotation": 0
     },
     "Red2Mid": {
       "GamePiece": "Cube",
       "x": 598.713,
-      "y": 106.45
+      "y": 106.45,
+      "Rotation": 0
     },
     "Red2Top": {
       "GamePiece": "Cone",
       "x": 598.713,
-      "y": 128.45
+      "y": 128.45,
+      "Rotation": 0
     },
     "Red3Bottom": {
       "GamePiece": "Cone",
       "x": 598.713,
-      "y": 150.45
+      "y": 150.45,
+      "Rotation": 0
     },
     "Red3Mid": {
       "GamePiece": "Cube",
       "x": 598.713,
-      "y": 172.45
+      "y": 172.45,
+      "Rotation": 0
     },
     "Red3Top": {
       "GamePiece": "Cone",
       "x": 598.713,
-      "y": 194.45
+      "y": 194.45,
+      "Rotation": 0
     }
   }
 }

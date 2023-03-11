@@ -129,7 +129,14 @@ class RobotDimensions:
     PIVOT_TO_FLOOR = (15 * u.inch).m_as(u.m)
     PIVOT_TO_MAX_VERTICAL_EXTENSION = (63 * u.inch).m_as(u.m)
     PIVOT_TO_MAX_HORIZONTAL_EXTENSION = (63 * u.inch).m_as(u.m)
-    MAX_EXTENSION_FROM_PIVOT = (0 * u.inch).m_as(u.m)
+    # TODO: Find real value empirically (from pivot to end of claw)
+    MAX_EXTENSION_FROM_PIVOT = math.inf
+
+    # Includes bumpers
+    BASE_WIDTH = (37 * u.inch).m_as(u.m)
+    BASE_LENGTH = (37 * u.inch).m_as(u.m)
+
+    # FIELD_WIDTH = (655 * u.inch).m_as(u.m)
 
 
 class AutoConstants:
@@ -142,6 +149,14 @@ class PivotConstants:
 
     LEADER_MOTOR_PORT = 1
     FOLLOWER_MOTOR_PORT = 2
+
+    kS = 0
+    kG = 0
+    kV = 0
+    kA = 0
+
+    MAX_VELOCITY = 0
+    MAX_ACCELERATION = 0
 
     PID_TOLERANCE = 2
 

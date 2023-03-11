@@ -5,6 +5,8 @@ from collections.abc import Callable
 import commands2
 import rev
 import wpilib
+import wpimath.controller
+import wpimath.trajectory
 from wpimath.geometry import Rotation2d, Translation3d
 
 from map import PivotConstants, WinchConstants, RobotDimensions
@@ -12,11 +14,12 @@ from map import PivotConstants, WinchConstants, RobotDimensions
 """
 Possible ideas for counteracting gravity:
     * Have min, mid, and max extension values that we switch between
-    * 
 """
 
 # TODO: Figure out structure for arm code. I.e., how should I split up the pivot and winch?
 # TODO: Make the arm stow itself
+
+DELTA_TIME = 0.02
 
 
 class ArmPivot(commands2.SubsystemBase):
@@ -25,12 +28,21 @@ class ArmPivot(commands2.SubsystemBase):
     def __init__(self):
         commands2.SubsystemBase.__init__(self)
 
-        self._setpoint = None
+        self.setpoint = wpimath.trajectory.TrapezoidProfile.State()
+        self.goal = wpimath.trajectory.TrapezoidProfile.State()
+        # TODO: Find constants
+        self.constraints = wpimath.trajectory.TrapezoidProfile.Constraints(
+            PivotConstants.MAX_VELOCITY, PivotConstants.MAX_ACCELERATION
+        )
 
         self.leader = rev.CANSparkMax(PivotConstants.LEADER_MOTOR_PORT, rev.CANSparkMax.MotorType.kBrushless)
         self.controller = self.leader.getPIDController()
         self.encoder = self.leader.getEncoder()
         self.follower = rev.CANSparkMax(PivotConstants.FOLLOWER_MOTOR_PORT, rev.CANSparkMax.MotorType.kBrushless)
+
+        self.feedforward = wpimath.controller.ArmFeedforward(
+            PivotConstants.kS, PivotConstants.kG, PivotConstants.kV, PivotConstants.kA
+        )
 
         self._config_motors()
 
@@ -53,8 +65,26 @@ class ArmPivot(commands2.SubsystemBase):
         self.follower.follow(self.leader)
 
     def rotate_to(self, angle: Rotation2d):
-        self._setpoint = angle.degrees()
-        self.controller.setReference(self._setpoint, rev.CANSparkMax.ControlType.kPosition)
+        """
+        Make the arm rotate to a specified angle. Must be called periodically
+
+        :param angle: The angle setpoint
+        """
+
+        self.goal = wpimath.trajectory.TrapezoidProfile.State(angle.degrees())
+
+        profile = wpimath.trajectory.TrapezoidProfile(self.constraints, self.goal, self.setpoint)
+
+        self.setpoint = profile.calculate(DELTA_TIME)
+
+        wpilib.SmartDashboard.putNumber("PIVOT_DESIRED_POSITION", self.setpoint.position)
+        wpilib.SmartDashboard.putNumber("PIVOT_DESIRED_VELOCITY", self.setpoint.velocity)
+
+        self.controller.setReference(
+            self.setpoint.position,
+            rev.CANSparkMax.ControlType.kPosition,
+            arbFeedforward=self.feedforward.calculate(self.setpoint.position, self.setpoint.velocity),
+        )
 
     def set_power(self, power: float):
         self.leader.set(power)
@@ -62,11 +92,8 @@ class ArmPivot(commands2.SubsystemBase):
     def reset_angle(self, reference: float = 0):
         self.encoder.setPosition(reference)
 
-    def at_setpoint(self) -> bool:
-        if self._setpoint is None:
-            raise Exception("Setpoint isn't set! Call rotate_to() first.")
-
-        return at_setpoint(self.encoder.getPosition(), self._setpoint, PivotConstants.PID_TOLERANCE)
+    def at_goal(self) -> bool:
+        return within_tolerance(self.encoder.getPosition(), self.goal.position, PivotConstants.PID_TOLERANCE)
 
     @property
     def angle(self) -> Rotation2d:
@@ -104,6 +131,7 @@ class ArmWinch(commands2.SubsystemBase):
 
     def extend_distance(self, distance: float):
         self._setpoint = distance
+        wpilib.SmartDashboard.putNumber("WINCH_DESIRED_DISTANCE", distance)
         self.controller.setReference(self._setpoint, rev.CANSparkMax.ControlType.kPosition)
 
     def set_power(self, power: float):
@@ -113,7 +141,7 @@ class ArmWinch(commands2.SubsystemBase):
         if self._setpoint is None:
             raise Exception("Setpoint isn't set! Call rotate_to() first.")
 
-        return at_setpoint(self.encoder.getPosition(), self._setpoint, WinchConstants.PID_TOLERANCE)
+        return within_tolerance(self.encoder.getPosition(), self._setpoint, WinchConstants.PID_TOLERANCE)
 
 
 class ArmStructure(commands2.SubsystemBase):
@@ -136,14 +164,6 @@ class ArmStructure(commands2.SubsystemBase):
 
         self.winch.extend_distance(limited_extension)
 
-    def stow(self):
-        """Command the arm to rotate upright and extend as far in as possible."""
-
-        self.extend_distance(0)
-
-        # 90 degrees is upright
-        self.pivot.rotate_to(Rotation2d.fromDegrees(90))
-
     def manual_winch_command(self, power: Callable[[], float]):
         return commands2.RunCommand(lambda: self.winch.set_power(power()), self.winch).alongWith(
             commands2.RunCommand(lambda: wpilib.SmartDashboard.putNumber("Winch Power", power()))  # type: ignore
@@ -154,10 +174,22 @@ class ArmStructure(commands2.SubsystemBase):
             commands2.RunCommand(lambda: wpilib.SmartDashboard.putNumber("Pivot Power", power()))  # type: ignore
         )
 
+    def stow_command(self):
+        """Command to move arm in and upright"""
+
+        return (
+            commands2.InstantCommand(lambda: self.extend_distance(0), self.winch)
+            # 90 degrees is upright
+            .alongWith(
+                commands2.RunCommand(lambda: self.pivot.rotate_to(Rotation2d.fromDegrees(90)), self.pivot)
+            ).until(self.pivot.at_goal)
+        )
+
 
 def angle_to(target: Translation3d, robot_translation: Translation3d) -> Rotation2d:
     global_arm_translation = robot_translation + PivotConstants.RELATIVE_POSITION
     xy_distance = global_arm_translation.toTranslation2d().distance(target.toTranslation2d())
+    wpilib.SmartDashboard.putNumber("debug_DIST", xy_distance)
     z_distance = abs(target.z - global_arm_translation.z)
     angle = math.atan(z_distance / xy_distance)
     return Rotation2d(angle)
@@ -166,16 +198,25 @@ def angle_to(target: Translation3d, robot_translation: Translation3d) -> Rotatio
 def extension_to(target: Translation3d, angle: Rotation2d, robot_translation: Translation3d) -> float:
     global_arm_translation = robot_translation + PivotConstants.RELATIVE_POSITION
     z_distance = abs(target.z - global_arm_translation.z)
+
+    wpilib.SmartDashboard.putNumber("debug_TARGET_Z", target.z)
+    wpilib.SmartDashboard.putNumber("debug_GLOBAL_ARM_TRANSLATION_Z", global_arm_translation.z)
+    wpilib.SmartDashboard.putNumber("debug_ANGLE", angle.degrees())
+
     hyp = z_distance / angle.sin()
+    wpilib.SmartDashboard.putNumber("debug_OUT", hyp)
+
     return hyp
 
 
 def maximum_extension(angle: Rotation2d) -> float:
+    # TODO: None of these returns 0. Check elsewhere
     horizontal = abs(RobotDimensions.PIVOT_TO_MAX_HORIZONTAL_EXTENSION / angle.cos())
     to_ceiling = abs(RobotDimensions.PIVOT_TO_MAX_VERTICAL_EXTENSION / (angle - Rotation2d.fromDegrees(90)).cos())
     to_floor = abs(RobotDimensions.PIVOT_TO_FLOOR / (Rotation2d.fromDegrees(360) - angle).sin())
+    # print(f"{horizontal=}, {to_ceiling=}, {to_floor=}")
     return min(horizontal, to_ceiling, to_floor, RobotDimensions.MAX_EXTENSION_FROM_PIVOT)
 
 
-def at_setpoint(reference: float, setpoint: float, tolerance: float) -> bool:
-    return setpoint - tolerance <= reference <= setpoint + tolerance
+def within_tolerance(actual: float, reference: float, tolerance: float) -> bool:
+    return reference - tolerance <= actual <= reference + tolerance

@@ -9,6 +9,7 @@ from commands import (
     CycleCommand,
     ReachTargetCommand,
     AlignToGridCommand,
+    ReachNearestTargetCommand,
 )
 from subsystems.arm import ArmStructure
 from subsystems.claw import Claw
@@ -52,9 +53,9 @@ class RobotContainer:
         )
 
         self.arm_cycle_cmd = CycleCommand(
-            commands2.PrintCommand("low"),
-            commands2.PrintCommand("medium"),
-            commands2.PrintCommand("high"),
+            ReachNearestTargetCommand(ReachNearestTargetCommand.TargetHeight.BOTTOM, self.swerve, self.arm),
+            ReachNearestTargetCommand(ReachNearestTargetCommand.TargetHeight.MID, self.swerve, self.arm),
+            ReachNearestTargetCommand(ReachNearestTargetCommand.TargetHeight.TOP, self.swerve, self.arm),
             run_first_command_on_init=False,
         )
         self.arm_cycle_cmd.addRequirements(self.arm)
@@ -77,9 +78,6 @@ class RobotContainer:
         # Put the chooser on Smart Dashboard
         wpilib.SmartDashboard.putData(self.chooser)
 
-        # Enable the camera feed
-        # wpilib.CameraServer.launch()
-
     def configure_button_bindings(self):
         """Bind buttons on the Xbox controllers to run Commands"""
         self.driver_stick.balance.whileTrue(BalanceCommand(self.swerve))
@@ -96,8 +94,20 @@ class RobotContainer:
         self.operator_stick.cycle_next_height.onTrue(commands2.InstantCommand(self.arm_cycle_cmd.next))
         self.operator_stick.cycle_previous_height.onTrue(commands2.InstantCommand(self.arm_cycle_cmd.previous))
         self.operator_stick.stow.onTrue(
-            commands2.InstantCommand(self.arm.stow).beforeStarting(lambda: print("Stowing arm"))
+            commands2.SequentialCommandGroup(
+                commands2.PrintCommand("Stowing arm"),
+                self.arm.stow_command(),
+                commands2.PrintCommand("Finished stowing arm"),
+            )
         )
+
+        # TODO: Temporary
+        self.operator_stick.stick.Y().onTrue(
+            commands2.RunCommand(
+                lambda: self.arm.pivot.rotate_to(wpimath.geometry.Rotation2d.fromDegrees(90)), self.arm.pivot
+            )
+        )
+
         # fmt: off
         self.operator_stick.intake \
             .whileTrue(self.claw.intake_command()) \
