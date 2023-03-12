@@ -9,7 +9,16 @@ import commands2
 import wpilib
 import wpimath.controller
 import wpimath.trajectory
-from wpimath.geometry import Translation2d, Translation3d, Pose2d, Rotation2d, Transform2d
+from wpimath.geometry import (
+    Translation2d,
+    Translation3d,
+    Pose2d,
+    Rotation2d,
+    Transform2d,
+    Pose3d,
+    Rotation3d,
+    Transform3d,
+)
 
 import swervelib
 from map import AutoConstants, RobotDimensions
@@ -101,9 +110,9 @@ class ReachTargetCommand(commands2.CommandBase):
 class ReachNearestTargetCommand(ReachTargetCommand):
     class TargetHeight(enum.Enum):
         # Derived from the spreadsheet
-        BOTTOM = Translation3d(0, 0, 0.001)
-        MID = Translation3d((21.87 * u.inch).m_as(u.m), 0, (34.065 * u.inch).m_as(u.m))
-        TOP = Translation3d((38.896 * u.inch).m_as(u.m), 0, (46.065 * u.inch).m_as(u.m))
+        BOTTOM = Transform3d(Translation3d(0, 0, 0.001), Rotation3d())
+        MID = Transform3d(Translation3d((21.87 * u.inch).m_as(u.m), 0, (34.065 * u.inch).m_as(u.m)), Rotation3d())
+        TOP = Transform3d(Translation3d((38.896 * u.inch).m_as(u.m), 0, (46.065 * u.inch).m_as(u.m)), Rotation3d())
 
     def __init__(self, height: TargetHeight, swerve: swervelib.Swerve, arm_: ArmStructure):
         ReachTargetCommand.__init__(self, Translation3d(), swerve, arm_)
@@ -112,14 +121,13 @@ class ReachNearestTargetCommand(ReachTargetCommand):
 
     def execute(self) -> None:
         # Acquire the nearest GRID element
-        nearest_element_2d = nearest(self.swerve.pose, field_elements())[1].translation()
-        # TODO: Standardize use of 3d classes around codebase
-        nearest_element_3d = Translation3d(nearest_element_2d.x, nearest_element_2d.y, 0)
+        nearest_element = Pose3d(nearest(self.swerve.pose, field_elements())[1])
 
         # Offset the target's pose to acquire the bottom, mid, or high pylon's translation
-        # TODO: Translates incorrectly for red elements
-        self.target = nearest_element_3d - self.offset
-        wpilib.SmartDashboard.putString("debug_TARGET_GLOBAL_POS", f"x: {self.target.x}, y: {self.target.y}, z: {self.target.z}")
+        self.target = nearest_element.transformBy(self.offset)
+        wpilib.SmartDashboard.putString(
+            "debug_TARGET_GLOBAL_POS", f"x: {self.target.x}, y: {self.target.y}, z: {self.target.z}"
+        )
         wpilib.SmartDashboard.putString(
             "CLAW_DESIRED_POSE", f"x: {self.target.x}, y: {self.target.y}, z: {self.target.z}"
         )

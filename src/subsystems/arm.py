@@ -210,11 +210,9 @@ def extension_to(target: Translation3d, angle: Rotation2d, robot_translation: Tr
 
 
 def maximum_extension(angle: Rotation2d) -> float:
-    # TODO: None of these returns 0. Check elsewhere
     horizontal = abs(RobotDimensions.PIVOT_TO_MAX_HORIZONTAL_EXTENSION / angle.cos())
     to_ceiling = abs(RobotDimensions.PIVOT_TO_MAX_VERTICAL_EXTENSION / (angle - Rotation2d.fromDegrees(90)).cos())
     to_floor = abs(RobotDimensions.PIVOT_TO_FLOOR / (Rotation2d.fromDegrees(360) - angle).sin())
-    # print(f"{horizontal=}, {to_ceiling=}, {to_floor=}")
     return min(horizontal, to_ceiling, to_floor, RobotDimensions.MAX_EXTENSION_FROM_PIVOT)
 
 
