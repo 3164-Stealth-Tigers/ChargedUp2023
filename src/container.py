@@ -17,6 +17,7 @@ from swervelib import Swerve
 
 from map import DrivetrainConstants, VISION_PARAMS
 from oi import XboxDriver, XboxOperator, LabTestXboxOperator
+from tests import *
 
 
 class RobotContainer:
@@ -134,3 +135,6 @@ class RobotContainer:
         constraints = wpimath.trajectory.TrapezoidProfileRadians.Constraints(2, 4)
         self.chooser.setDefaultOption("Trajectory Test", self.swerve.follow_trajectory_command(trajectory, True, constraints))
         """
+
+    def get_field_tests(self) -> list[TestCommand]:
+        return [ExampleTest()]
