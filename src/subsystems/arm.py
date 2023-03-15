@@ -18,17 +18,18 @@ from map import PivotConstants, WinchConstants, RobotDimensions
 DELTA_TIME = 0.02
 
 
+class MechanismMode(enum.Enum):
+    DIRECT = enum.auto()
+    POSITION = enum.auto()
+
+
 class ArmPivot(commands2.SubsystemBase):
     """The pivot component of the arm"""
-
-    class Mode(enum.Enum):
-        DIRECT = enum.auto()
-        POSITION = enum.auto()
 
     def __init__(self):
         commands2.SubsystemBase.__init__(self)
 
-        self.mode = self.Mode.DIRECT
+        self.mode = MechanismMode.DIRECT
         self.setpoint = wpimath.trajectory.TrapezoidProfile.State()
         self.goal = wpimath.trajectory.TrapezoidProfile.State()
 
@@ -68,7 +69,7 @@ class ArmPivot(commands2.SubsystemBase):
     def periodic(self) -> None:
         wpilib.SmartDashboard.putString("Pivot Mode", self.mode.name)
 
-        if self.mode is self.Mode.POSITION:
+        if self.mode is MechanismMode.POSITION:
             profile = wpimath.trajectory.TrapezoidProfile(self.constraints, self.goal, self.setpoint)
 
             self.setpoint = profile.calculate(DELTA_TIME)
@@ -88,18 +89,18 @@ class ArmPivot(commands2.SubsystemBase):
 
         :param angle: The angle setpoint
         """
-        self.mode = self.Mode.POSITION
+        self.mode = MechanismMode.POSITION
         self.goal = wpimath.trajectory.TrapezoidProfile.State(angle.degrees())
 
     def set_power(self, power: float):
-        self.mode = self.Mode.DIRECT
+        self.mode = MechanismMode.DIRECT
         self.leader.set(power)
 
     def reset_angle(self, reference: float = 0):
         self.encoder.setPosition(reference)
 
     def at_goal(self) -> bool:
-        if self.mode is not self.Mode.POSITION:
+        if self.mode is not MechanismMode.POSITION:
             raise Exception("Goal not set! Call rotate_to() first.")
 
         return within_tolerance(self.encoder.getPosition(), self.goal.position, PivotConstants.PID_TOLERANCE)
@@ -115,7 +116,7 @@ class ArmWinch(commands2.SubsystemBase):
     def __init__(self):
         commands2.SubsystemBase.__init__(self)
 
-        self._setpoint = None
+        self.setpoint = 0
 
         self.motor = rev.CANSparkMax(WinchConstants.MOTOR_PORT, rev.CANSparkMax.MotorType.kBrushless)
         self.controller = self.motor.getPIDController()
@@ -138,19 +139,18 @@ class ArmWinch(commands2.SubsystemBase):
         self.encoder.setPositionConversionFactor(1)
         self.encoder.setPosition(0)
 
+    def periodic(self) -> None:
+        wpilib.SmartDashboard.putNumber("Winch Desired Position (m)", self.setpoint)
+
     def extend_distance(self, distance: float):
-        self._setpoint = distance
-        wpilib.SmartDashboard.putNumber("WINCH_DESIRED_DISTANCE", distance)
-        self.controller.setReference(self._setpoint, rev.CANSparkMax.ControlType.kPosition)
+        self.setpoint = distance
+        self.controller.setReference(self.setpoint, rev.CANSparkMax.ControlType.kPosition)
 
     def set_power(self, power: float):
         self.motor.set(power)
 
     def at_setpoint(self) -> bool:
-        if self._setpoint is None:
-            raise Exception("Setpoint isn't set! Call extend_distance() first.")
-
-        return within_tolerance(self.encoder.getPosition(), self._setpoint, WinchConstants.PID_TOLERANCE)
+        return within_tolerance(self.encoder.getPosition(), self.setpoint, WinchConstants.PID_TOLERANCE)
 
 
 class ArmStructure(commands2.SubsystemBase):
@@ -171,7 +171,7 @@ class ArmStructure(commands2.SubsystemBase):
     # We could constantly run the maximum_extension function and adjust in periodic()
 
     def periodic(self) -> None:
-        if self.pivot.mode is self.pivot.Mode.POSITION:
+        if self.pivot.mode is MechanismMode.POSITION:
             brake_value = (
                 wpilib.Relay.Value.kOn
                 if within_tolerance(self.pivot.setpoint.velocity, 0, 0.01)
@@ -206,7 +206,12 @@ class ArmStructure(commands2.SubsystemBase):
             self.pivot.goal.position += delta_position()
 
         return commands2.RunCommand(inner, self.pivot).beforeStarting(
-            lambda: setattr(self.pivot, "mode", self.pivot.Mode.POSITION)
+            lambda: setattr(self.pivot, "mode", MechanismMode.POSITION)
+        )
+
+    def manual_winch_position_command(self, delta_position: Callable[[], float]):
+        return commands2.RunCommand(
+            lambda: self.winch.extend_distance(self.winch.setpoint + delta_position()), self.winch
         )
 
     def toggle_brake_command(self):
