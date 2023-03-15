@@ -3,28 +3,27 @@ import functools
 import json
 import math
 import pathlib
-from typing import Optional
 
 import commands2
 import wpilib
-import wpimath.controller
 import wpimath.trajectory
+import wpimath.controller
 from wpimath.geometry import (
-    Translation2d,
     Translation3d,
+    Transform3d,
+    Rotation3d,
+    Pose3d,
     Pose2d,
     Rotation2d,
+    Translation2d,
     Transform2d,
-    Pose3d,
-    Rotation3d,
-    Transform3d,
 )
 
 import swervelib
 from map import AutoConstants, RobotDimensions
+from swervelib import u
 from subsystems import arm
 from subsystems.arm import ArmStructure
-from swervelib import u
 
 
 class VisualizeTargetCommand(commands2.CommandBase):
@@ -53,39 +52,6 @@ class VisualizeTargetCommand(commands2.CommandBase):
         wpilib.SmartDashboard.putNumber("Target Diff (y)", robot_pose.y - nearest_target[1].y)
 
 
-"""
-Single or multiple axis positional control with driver control on the leftover axis(es)
-
-Use the drive() function in closed loop and field relative mode. Run a PID loop for each axis that I want to use positional control on.
-Feed the result of each PID loop into the appropriate parameter of the drive() function. For the remaining axis,
-feed in the joystick value as done in TeleopCommand.
-
-I will be running a positional PID loop to figure out the desired velocity of the entire robot in one or more directions.
-Then, the drive() function will fuse those results together.
-"""
-
-
-class BalanceCommand(commands2.CommandBase):
-    def __init__(self, swerve: swervelib.Swerve):
-        commands2.CommandBase.__init__(self)
-
-        self.swerve = swerve
-
-        self.controller = wpimath.controller.PIDController(AutoConstants.BALANCE_kP, 0, 0)
-        self.controller.setSetpoint(0)
-        wpilib.SmartDashboard.putData("Balance PID", self.controller)
-
-    def execute(self) -> None:
-        pitch = self.swerve.pitch.degrees()
-        pitch = clamp(pitch, AutoConstants.BALANCE_MAX_EFFORT, -AutoConstants.BALANCE_MAX_EFFORT)
-        output = self.controller.calculate(pitch)
-        wpilib.SmartDashboard.putNumber("Balance PID Output", output)
-        self.swerve.drive(Translation2d(output, 0) * self.swerve.swerve_params.max_speed, 0, False, True)
-
-    def end(self, interrupted: bool) -> None:
-        self.swerve.drive(Translation2d(0, 0), 0, False, True)
-
-
 class ReachTargetCommand(commands2.CommandBase):
     def __init__(self, target: Translation3d, swerve: swervelib.Swerve, arm_: ArmStructure):
         commands2.CommandBase.__init__(self)
@@ -106,6 +72,9 @@ class ReachTargetCommand(commands2.CommandBase):
         self.arm.pivot.rotate_to(desired_arm_angle)
         self.arm.extend_distance(desired_extension)
 
+    def isFinished(self) -> bool:
+        return self.arm.pivot.at_goal() and self.arm.winch.at_setpoint()
+
 
 class ReachNearestTargetCommand(ReachTargetCommand):
     class TargetHeight(enum.Enum):
@@ -124,7 +93,7 @@ class ReachNearestTargetCommand(ReachTargetCommand):
         nearest_element = Pose3d(nearest(self.swerve.pose, field_elements())[1])
 
         # Offset the target's pose to acquire the bottom, mid, or high pylon's translation
-        self.target = nearest_element.transformBy(self.offset)
+        self.target = nearest_element.transformBy(self.offset).translation()
         wpilib.SmartDashboard.putString(
             "debug_TARGET_GLOBAL_POS", f"x: {self.target.x}, y: {self.target.y}, z: {self.target.z}"
         )
@@ -133,63 +102,6 @@ class ReachNearestTargetCommand(ReachTargetCommand):
         )
 
         super().execute()
-
-
-class CycleCommand(commands2.CommandBase):
-    """Command that can switch between multiple other commands with two methods"""
-
-    def __init__(self, *commands: commands2.Command, run_first_command_on_init=True):
-        commands2.CommandBase.__init__(self)
-
-        self._commands = commands
-        self._index = 0
-        self._max = len(commands) - 1
-        self._current_command: Optional[commands2.Command] = None
-        self.run_first = run_first_command_on_init
-
-        for command in commands:
-            command.setGrouped(True)
-            self.addRequirements(command.getRequirements())
-
-    def next(self):
-        """Switch to the next command."""
-        if not (self._current_command is None or self._current_command.isFinished()):
-            self._current_command.end(True)
-
-        self._index = min(self._index + 1, self._max)
-        self._current_command = self._commands[self._index]
-        self._current_command.initialize()
-
-    def previous(self):
-        """Switch to the previous command."""
-        if not (self._current_command is None or self._current_command.isFinished()):
-            self._current_command.end(True)
-
-        self._index = max(self._index - 1, 0)
-        self._current_command = self._commands[self._index]
-        self._current_command.initialize()
-
-    def initialize(self) -> None:
-        self._index = 0
-
-        if self.run_first:
-            self._current_command = self._commands[0]
-            self._current_command.initialize()
-
-    def execute(self) -> None:
-        current_command = self._current_command
-        if current_command is None:
-            return
-
-        current_command.execute()
-        if current_command.isFinished():
-            current_command.end(False)
-            self._current_command = None
-
-    def end(self, interrupted: bool) -> None:
-        current_command = self._current_command
-        if current_command is not None:
-            current_command.end(interrupted)
 
 
 class AlignToGridCommand(commands2.CommandBase):
@@ -241,9 +153,30 @@ class AlignToGridCommand(commands2.CommandBase):
         return self.inner_command.isFinished()
 
 
+class BalanceCommand(commands2.CommandBase):
+    def __init__(self, swerve: swervelib.Swerve):
+        commands2.CommandBase.__init__(self)
+
+        self.swerve = swerve
+
+        self.controller = wpimath.controller.PIDController(AutoConstants.BALANCE_kP, 0, 0)
+        self.controller.setSetpoint(0)
+        wpilib.SmartDashboard.putData("Balance PID", self.controller)
+
+    def execute(self) -> None:
+        pitch = self.swerve.pitch.degrees()
+        pitch = clamp(pitch, AutoConstants.BALANCE_MAX_EFFORT, -AutoConstants.BALANCE_MAX_EFFORT)
+        output = self.controller.calculate(pitch)
+        wpilib.SmartDashboard.putNumber("Balance PID Output", output)
+        self.swerve.drive(Translation2d(output, 0) * self.swerve.swerve_params.max_speed, 0, False, True)
+
+    def end(self, interrupted: bool) -> None:
+        self.swerve.drive(Translation2d(0, 0), 0, False, True)
+
+
 @functools.cache
 def field_elements() -> dict[str, Pose2d]:
-    file_path = pathlib.Path(__file__).resolve().parent / "resources" / "field_elements.json"
+    file_path = pathlib.Path(__file__).resolve().parents[1] / "resources" / "field_elements.json"
     with open(file_path, "r") as f:
         data = json.load(f)
 

@@ -129,7 +129,7 @@ class RobotDimensions:
     PIVOT_TO_FLOOR = (15 * u.inch).m_as(u.m)
     PIVOT_TO_MAX_VERTICAL_EXTENSION = (63 * u.inch).m_as(u.m)
     PIVOT_TO_MAX_HORIZONTAL_EXTENSION = (63 * u.inch).m_as(u.m)
-    # TODO: Find real value empirically (from pivot to end of claw)
+    # TODO: Find real value
     MAX_EXTENSION_FROM_PIVOT = math.inf
 
     # Includes bumpers
@@ -149,12 +149,14 @@ class PivotConstants:
 
     LEADER_MOTOR_PORT = 1
     FOLLOWER_MOTOR_PORT = 2
+    BRAKE_PORT = 0
 
     kS = 0
     kG = 0
     kV = 0
     kA = 0
 
+    # TODO: Find constants
     MAX_VELOCITY = 0
     MAX_ACCELERATION = 0
 

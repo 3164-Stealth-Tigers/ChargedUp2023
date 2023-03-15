@@ -114,6 +114,12 @@ class OperatorActionSet(Protocol):
         """Choose the previous arm height"""
         raise NotImplementedError
 
+    @property
+    @abstractmethod
+    def toggle_brake(self) -> Trigger:
+        """Toggle the friction brake that holds the arm in place"""
+        raise NotImplementedError
+
 
 # Control schemes
 
@@ -203,6 +209,10 @@ class XboxOperator(OperatorActionSet):
     @property
     def cycle_previous_height(self) -> Trigger:
         return Trigger(self.stick.POVDown(self.loop).getAsBoolean)
+
+    @property
+    def toggle_brake(self) -> Trigger:
+        return self.stick.Y()
 
 
 class LabTestXboxOperator(XboxOperator):

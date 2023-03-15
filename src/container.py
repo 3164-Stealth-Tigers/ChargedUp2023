@@ -3,21 +3,18 @@ import wpilib
 import wpimath.geometry
 import wpimath.trajectory
 
-from commands import (
-    BalanceCommand,
-    VisualizeTargetCommand,
-    CycleCommand,
-    ReachTargetCommand,
-    AlignToGridCommand,
-    ReachNearestTargetCommand,
-)
+from commands.game import BalanceCommand, VisualizeTargetCommand, AlignToGridCommand, ReachNearestTargetCommand
+from commands.factories import CycleCommand
 from subsystems.arm import ArmStructure
 from subsystems.claw import Claw
 from swervelib import Swerve
 
 from map import DrivetrainConstants, VISION_PARAMS
 from oi import XboxDriver, XboxOperator, LabTestXboxOperator
+from swervelib.dummy import Dummy
 from tests import *
+
+ARM_POWER_TEST = False
 
 
 class RobotContainer:
@@ -53,19 +50,26 @@ class RobotContainer:
             ).alongWith(VisualizeTargetCommand(self.swerve))
         )
 
-        self.arm_cycle_cmd = CycleCommand(
-            ReachNearestTargetCommand(ReachNearestTargetCommand.TargetHeight.BOTTOM, self.swerve, self.arm),
-            ReachNearestTargetCommand(ReachNearestTargetCommand.TargetHeight.MID, self.swerve, self.arm),
-            ReachNearestTargetCommand(ReachNearestTargetCommand.TargetHeight.TOP, self.swerve, self.arm),
-            run_first_command_on_init=False,
-        )
-        self.arm_cycle_cmd.addRequirements(self.arm)
-        self.arm.setDefaultCommand(
-            self.arm_cycle_cmd.alongWith(
-                self.arm.manual_pivot_command(self.operator_stick.pivot),
-                self.arm.manual_winch_command(self.operator_stick.extend),
+        # Run either the position or direct power commands... not both
+        if ARM_POWER_TEST:
+            self.arm_cycle_cmd = Dummy()
+            self.arm.pivot.setDefaultCommand(self.arm.manual_pivot_power_command(self.operator_stick.pivot))
+            self.arm.winch.setDefaultCommand(self.arm.manual_winch_power_command(self.operator_stick.extend))
+        else:
+            self.arm_cycle_cmd = CycleCommand(
+                ReachNearestTargetCommand(ReachNearestTargetCommand.TargetHeight.BOTTOM, self.swerve, self.arm),
+                ReachNearestTargetCommand(ReachNearestTargetCommand.TargetHeight.MID, self.swerve, self.arm),
+                ReachNearestTargetCommand(ReachNearestTargetCommand.TargetHeight.TOP, self.swerve, self.arm),
+                run_first_command_on_init=False,
             )
-        )
+            self.arm_cycle_cmd.addRequirements(self.arm)
+
+            # TODO: Add multiplier for delta position
+            self.arm.setDefaultCommand(
+                self.arm_cycle_cmd.alongWith(
+                    self.arm.manual_pivot_position_command(lambda: self.operator_stick.pivot() * 1)
+                )
+            )
 
         # Bind buttons to Commands
         self.configure_button_bindings()
@@ -84,11 +88,14 @@ class RobotContainer:
         self.driver_stick.balance.whileTrue(BalanceCommand(self.swerve))
         self.driver_stick.reset_gyro.onTrue(commands2.InstantCommand(self.swerve.zero_heading))
         # TODO: Test on real robot
+        # TODO Move max accel and angular accel to map.py and find empirical values
         self.driver_stick.align.whileTrue(
             AlignToGridCommand(
                 self.swerve,
-                wpimath.trajectory.TrajectoryConfig(2, 4),
-                wpimath.trajectory.TrapezoidProfileRadians.Constraints(2, 4),
+                wpimath.trajectory.TrajectoryConfig(self.swerve.swerve_params.max_speed, 4),
+                wpimath.trajectory.TrapezoidProfileRadians.Constraints(
+                    self.swerve.swerve_params.max_angular_velocity, 4
+                ),
             )
         )
 
@@ -101,13 +108,16 @@ class RobotContainer:
                 commands2.PrintCommand("Finished stowing arm"),
             )
         )
+        self.operator_stick.toggle_brake.onTrue(self.arm.toggle_brake_command())
 
         # TODO: Temporary
+        """
         self.operator_stick.stick.Y().onTrue(
             commands2.RunCommand(
                 lambda: self.arm.pivot.rotate_to(wpimath.geometry.Rotation2d.fromDegrees(90)), self.arm.pivot
             )
         )
+        """
 
         # fmt: off
         self.operator_stick.intake \
