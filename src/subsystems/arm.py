@@ -50,24 +50,32 @@ class ArmPivot(commands2.SubsystemBase):
 
     def _config_motors(self):
         self.leader.restoreFactoryDefaults()
+        self.follower.restoreFactoryDefaults()
 
         self.controller.setP(0)
         self.controller.setI(0)
         self.controller.setD(0)
         self.controller.setFF(0)
 
-        self.leader.setSmartCurrentLimit(20)
-        self.leader.setSmartCurrentLimit(40)
+        self.leader.setSmartCurrentLimit(80)
+        self.follower.setSmartCurrentLimit(80)
+
+        self.controller.setOutputRange(PivotConstants.MIN_OUTPUT, PivotConstants.MAX_OUTPUT)
 
         self.leader.setIdleMode(rev.CANSparkMax.IdleMode.kBrake)
 
-        self.encoder.setPositionConversionFactor(1)
+        self.encoder.setPositionConversionFactor(360 / PivotConstants.GEARING)
         self.encoder.setPosition(0)
 
         self.follower.follow(self.leader)
 
     def periodic(self) -> None:
         wpilib.SmartDashboard.putString("Pivot Mode", self.mode.name)
+        wpilib.SmartDashboard.putNumber("Arm Bus Voltage", self.leader.getBusVoltage())
+        wpilib.SmartDashboard.putNumber(
+            "Pivot Output Voltage", self.leader.getAppliedOutput() * self.leader.getBusVoltage()
+        )
+        wpilib.SmartDashboard.putNumber("Arm Rotation (deg)", self.angle.degrees())
 
         if self.mode is MechanismMode.POSITION:
             profile = wpimath.trajectory.TrapezoidProfile(self.constraints, self.goal, self.setpoint)
@@ -136,11 +144,13 @@ class ArmWinch(commands2.SubsystemBase):
 
         self.motor.setIdleMode(rev.CANSparkMax.IdleMode.kBrake)
 
-        self.encoder.setPositionConversionFactor(1)
-        self.encoder.setPosition(0)
+        # TODO: Find this value (circumference of spool + gearing + 360 degs per rotation)
+        self.encoder.setPositionConversionFactor(360 * WinchConstants.SPOOL_CIRCUMFERENCE / WinchConstants.GEARING)
+        self.encoder.setPosition(RobotDimensions.MIN_EXTENSION_FROM_PIVOT)
 
     def periodic(self) -> None:
         wpilib.SmartDashboard.putNumber("Winch Desired Position (m)", self.setpoint)
+        wpilib.SmartDashboard.putNumber("Winch Extensions (m)", self.extension)
 
     def extend_distance(self, distance: float):
         self.setpoint = distance
@@ -151,6 +161,15 @@ class ArmWinch(commands2.SubsystemBase):
 
     def at_setpoint(self) -> bool:
         return within_tolerance(self.encoder.getPosition(), self.setpoint, WinchConstants.PID_TOLERANCE)
+
+    @property
+    def extension(self) -> float:
+        """The extension in metres"""
+        # TODO: Make extension from pivot rather than from first stage
+        return self.encoder.getPosition()
+
+    def reset_distance(self):
+        self.encoder.setPosition(RobotDimensions.MIN_EXTENSION_FROM_PIVOT)
 
 
 class ArmStructure(commands2.SubsystemBase):
@@ -180,6 +199,9 @@ class ArmStructure(commands2.SubsystemBase):
             self.brake.set(brake_value)
 
         wpilib.SmartDashboard.putBoolean("Brake Engaged", self.brake.get() is wpilib.Relay.Value.kOn)
+
+        # Adjust the arm extension to ensure it doesn't ram itself into the floor
+        # self.extend_distance(self.winch.setpoint)
 
     def extend_distance(self, distance: float):
         # Limit the arm's extension to avoid fouls

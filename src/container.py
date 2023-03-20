@@ -14,7 +14,7 @@ from oi import XboxDriver, XboxOperator, LabTestXboxOperator
 from swervelib.dummy import Dummy
 from tests import *
 
-ARM_POWER_TEST = False
+ARM_POWER_TEST = True
 
 
 class RobotContainer:
@@ -28,7 +28,7 @@ class RobotContainer:
         self.swerve = Swerve(
             DrivetrainConstants.SWERVE_MODULE_PARAMS,
             DrivetrainConstants.SWERVE_PARAMS,
-            VISION_PARAMS,
+            None,  # VISION_PARAMS,
         )
         self.arm = ArmStructure()
         self.claw = Claw()
@@ -110,6 +110,8 @@ class RobotContainer:
             )
         )
         self.operator_stick.toggle_brake.onTrue(self.arm.toggle_brake_command())
+        self.operator_stick.reset_arm_angle.onTrue(commands2.InstantCommand(self.arm.pivot.reset_angle))
+        self.operator_stick.reset_winch_extension.onTrue(commands2.InstantCommand(self.arm.winch.reset_distance))
 
         # TODO: Temporary
         """

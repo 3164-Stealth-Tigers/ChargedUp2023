@@ -120,6 +120,16 @@ class OperatorActionSet(Protocol):
         """Toggle the friction brake that holds the arm in place"""
         raise NotImplementedError
 
+    @property
+    @abstractmethod
+    def reset_arm_angle(self) -> Trigger:
+        raise NotImplementedError
+
+    @property
+    @abstractmethod
+    def reset_winch_extension(self) -> Trigger:
+        raise NotImplementedError
+
 
 # Control schemes
 
@@ -146,7 +156,7 @@ class XboxDriver(DriverActionSet):
         """The robot's movement around the Z axis, controlled by moving the right joystick left and right.
         From -1 to 1, CCW+
         """
-        return -self.stick.getRightX() * 0.5
+        return -self.stick.getRightX() * 1
 
     @property
     def balance(self) -> Trigger:
@@ -213,6 +223,14 @@ class XboxOperator(OperatorActionSet):
     @property
     def toggle_brake(self) -> Trigger:
         return self.stick.Y()
+
+    @property
+    def reset_arm_angle(self) -> Trigger:
+        return self.stick.start()
+
+    @property
+    def reset_winch_extension(self) -> Trigger:
+        return self.stick.back()
 
 
 class LabTestXboxOperator(XboxOperator):
