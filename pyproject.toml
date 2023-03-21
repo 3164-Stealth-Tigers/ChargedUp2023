@@ -7,8 +7,8 @@ readme = "README.md"
 
 [tool.poetry.dependencies]
 python = "~3.11"
-robotpy = {extras = ["commands2", "ctre", "photonvision", "rev"], version = "^2023.3.2.1"}
-robotpy-apriltag = "^2023.3.2.1"
+robotpy = {extras = ["commands2", "ctre", "photonvision", "rev"], version = "^2023.4.2.1"}
+robotpy-apriltag = "^2023.4.2.0"
 
 
 [tool.poetry.group.dev.dependencies]
