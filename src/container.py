@@ -89,13 +89,14 @@ class RobotContainer:
         self.driver_stick.balance.whileTrue(BalanceCommand(self.swerve))
         self.driver_stick.reset_gyro.onTrue(commands2.InstantCommand(self.swerve.zero_heading))
         # TODO: Test on real robot
-        # TODO Move max accel and angular accel to map.py and find empirical values
         self.driver_stick.align.whileTrue(
             AlignToGridCommand(
                 self.swerve,
-                wpimath.trajectory.TrajectoryConfig(self.swerve.swerve_params.max_speed, 4),
+                wpimath.trajectory.TrajectoryConfig(
+                    self.swerve.swerve_params.max_speed, DrivetrainConstants.MAX_ACCELERATION
+                ),
                 wpimath.trajectory.TrapezoidProfileRadians.Constraints(
-                    self.swerve.swerve_params.max_angular_velocity, 4
+                    self.swerve.swerve_params.max_angular_velocity, DrivetrainConstants.MAX_ANGULAR_ACCELERATION
                 ),
             )
         )
@@ -138,16 +139,20 @@ class RobotContainer:
 
     def add_autonomous_routines(self):
         """Add routines to the autonomous picker"""
-        """
         trajectory = wpimath.trajectory.TrajectoryGenerator.generateTrajectory(
             wpimath.geometry.Pose2d(0, 0, 0),
             [],
             wpimath.geometry.Pose2d(1, 0, 0),
-            wpimath.trajectory.TrajectoryConfig(2, 4)
+            wpimath.trajectory.TrajectoryConfig(
+                self.swerve.swerve_params.max_speed, DrivetrainConstants.MAX_ACCELERATION
+            ),
         )
-        constraints = wpimath.trajectory.TrapezoidProfileRadians.Constraints(2, 4)
-        self.chooser.setDefaultOption("Trajectory Test", self.swerve.follow_trajectory_command(trajectory, True, constraints))
-        """
+        theta_constraints = wpimath.trajectory.TrapezoidProfileRadians.Constraints(
+            self.swerve.swerve_params.max_angular_velocity, DrivetrainConstants.MAX_ANGULAR_ACCELERATION
+        )
+        self.chooser.setDefaultOption(
+            "Trajectory Test", self.swerve.follow_trajectory_command(trajectory, True, theta_constraints)
+        )
 
     def get_field_tests(self) -> list[TestCommand]:
         return [ExampleTest()]

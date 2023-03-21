@@ -52,7 +52,6 @@ class DrivetrainConstants:
         angle_kI=0,
         angle_kD=0,
         angle_kF=0,
-        # angle_allowable_error=0.25 * u.deg,
 
         drive_kP=0.12465,
         drive_kI=0,
@@ -165,8 +164,8 @@ class PivotConstants:
     kA = 0
 
     # Maximum control effort. Only for testing purposes; leave at -1 and 1 respectively during competition.
-    MIN_OUTPUT = -0.1
-    MAX_OUTPUT = 0.1
+    MIN_OUTPUT = 1
+    MAX_OUTPUT = 1
 
     # TODO: Find constants
     MAX_VELOCITY = 0
@@ -180,6 +179,8 @@ class WinchConstants:
     SPOOL_CIRCUMFERENCE = (13.75 * u.mm).m_as(u.m)
 
     MOTOR_PORT = 5
+
+    INVERTED = True
 
     PID_TOLERANCE = (1 * u.inch).m_as(u.m)
 

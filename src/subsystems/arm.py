@@ -12,7 +12,6 @@ from wpimath.geometry import Rotation2d, Translation3d
 
 from map import PivotConstants, WinchConstants, RobotDimensions
 
-# TODO: Figure out structure for arm code. I.e., how should I split up the pivot and winch?
 # TODO: Make the arm stow itself
 
 DELTA_TIME = 0.02
@@ -124,7 +123,7 @@ class ArmWinch(commands2.SubsystemBase):
     def __init__(self):
         commands2.SubsystemBase.__init__(self)
 
-        self.setpoint = 0
+        self.setpoint = RobotDimensions.MIN_EXTENSION_FROM_PIVOT
 
         self.motor = rev.CANSparkMax(WinchConstants.MOTOR_PORT, rev.CANSparkMax.MotorType.kBrushless)
         self.controller = self.motor.getPIDController()
@@ -144,17 +143,27 @@ class ArmWinch(commands2.SubsystemBase):
 
         self.motor.setIdleMode(rev.CANSparkMax.IdleMode.kBrake)
 
-        # TODO: Find this value (circumference of spool + gearing + 360 degs per rotation)
+        self.motor.setInverted(WinchConstants.INVERTED)
+
         self.encoder.setPositionConversionFactor(360 * WinchConstants.SPOOL_CIRCUMFERENCE / WinchConstants.GEARING)
         self.encoder.setPosition(RobotDimensions.MIN_EXTENSION_FROM_PIVOT)
+
+        # Stop the arm from overextending and fouling
+        self.motor.setSoftLimit(rev.CANSparkMax.SoftLimitDirection.kForward, RobotDimensions.MAX_EXTENSION_FROM_PIVOT)
+        self.motor.setSoftLimit(rev.CANSparkMax.SoftLimitDirection.kReverse, RobotDimensions.MIN_EXTENSION_FROM_PIVOT)
 
     def periodic(self) -> None:
         wpilib.SmartDashboard.putNumber("Winch Desired Position (m)", self.setpoint)
         wpilib.SmartDashboard.putNumber("Winch Extensions (m)", self.extension)
 
     def extend_distance(self, distance: float):
+        # self.setpoint = distance
+        # self.controller.setReference(self.setpoint, rev.CANSparkMax.ControlType.kPosition)
         self.setpoint = distance
-        self.controller.setReference(self.setpoint, rev.CANSparkMax.ControlType.kPosition)
+        if self.extension < distance:
+            self.set_power(0.3)
+        else:
+            self.set_power(-0.3)
 
     def set_power(self, power: float):
         self.motor.set(power)
@@ -232,8 +241,10 @@ class ArmStructure(commands2.SubsystemBase):
         )
 
     def manual_winch_position_command(self, delta_position: Callable[[], float]):
-        return commands2.RunCommand(
-            lambda: self.winch.extend_distance(self.winch.setpoint + delta_position()), self.winch
+        return (
+            commands2.RunCommand(lambda: self.winch.extend_distance(self.winch.setpoint + delta_position()), self.winch)
+            .withInterrupt(self.winch.at_setpoint)
+            .andThen(lambda: self.winch.set_power(0))
         )
 
     def toggle_brake_command(self):
@@ -243,7 +254,7 @@ class ArmStructure(commands2.SubsystemBase):
         """Command to move arm in and upright"""
 
         return (
-            commands2.InstantCommand(lambda: self.extend_distance(0), self.winch)
+            commands2.InstantCommand(lambda: self.extend_distance(RobotDimensions.MIN_EXTENSION_FROM_PIVOT), self.winch)
             # 90 degrees is upright
             .alongWith(
                 commands2.RunCommand(lambda: self.pivot.rotate_to(Rotation2d.fromDegrees(90)), self.pivot)
