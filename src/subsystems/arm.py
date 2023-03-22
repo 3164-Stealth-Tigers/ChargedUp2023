@@ -62,6 +62,7 @@ class ArmPivot(commands2.SubsystemBase):
         self.controller.setOutputRange(PivotConstants.MIN_OUTPUT, PivotConstants.MAX_OUTPUT)
 
         self.leader.setIdleMode(rev.CANSparkMax.IdleMode.kBrake)
+        self.follower.setIdleMode(rev.CANSparkMax.IdleMode.kBrake)
 
         self.encoder.setPositionConversionFactor(360 / PivotConstants.GEARING)
         self.encoder.setPosition(0)

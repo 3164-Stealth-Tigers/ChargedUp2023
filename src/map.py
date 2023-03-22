@@ -164,7 +164,7 @@ class PivotConstants:
     kA = 0
 
     # Maximum control effort. Only for testing purposes; leave at -1 and 1 respectively during competition.
-    MIN_OUTPUT = 1
+    MIN_OUTPUT = -1
     MAX_OUTPUT = 1
 
     # TODO: Find constants
@@ -180,11 +180,11 @@ class WinchConstants:
 
     MOTOR_PORT = 5
 
-    INVERTED = True
+    INVERTED = False
 
     PID_TOLERANCE = (1 * u.inch).m_as(u.m)
 
 
 class ClawConstants:
-    MOTOR_PORT = 4
+    MOTOR_PORT = 3
     ANALOG_DISTANCE_SENSOR_PORT = 0

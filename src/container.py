@@ -111,7 +111,7 @@ class RobotContainer:
             )
         )
         self.operator_stick.toggle_brake.onTrue(self.arm.toggle_brake_command())
-        self.operator_stick.reset_arm_angle.onTrue(commands2.InstantCommand(self.arm.pivot.reset_angle))
+        self.operator_stick.reset_arm_angle.onTrue(commands2.InstantCommand(lambda: self.arm.pivot.reset_angle(90)))
         self.operator_stick.reset_winch_extension.onTrue(commands2.InstantCommand(self.arm.winch.reset_distance))
 
         # TODO: Temporary
@@ -123,16 +123,8 @@ class RobotContainer:
         )
         """
 
-        # fmt: off
-        self.operator_stick.intake \
-            .whileTrue(self.claw.intake_command()) \
-            .onTrue(commands2.PrintCommand("Intaking")) \
-            .onFalse(commands2.PrintCommand("Stopped"))
-        self.operator_stick.outtake \
-            .whileTrue(self.claw.outtake_command()) \
-            .onTrue(commands2.PrintCommand("Outtaking")) \
-            .onFalse(commands2.PrintCommand("Stopped"))
-        # fmt: on
+        self.operator_stick.intake.whileTrue(self.claw.intake_command()).onFalse(self.claw.stop_command())
+        self.operator_stick.outtake.whileTrue(self.claw.outtake_command()).onFalse(self.claw.stop_command())
 
     def get_autonomous_command(self) -> commands2.Command:
         return self.chooser.getSelected()

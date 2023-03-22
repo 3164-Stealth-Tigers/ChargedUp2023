@@ -30,11 +30,11 @@ class Claw(commands2.SubsystemBase):
     def outtake(self):
         self.motor.set(-1)
 
-    def stop(self):
-        self.motor.set(0)
+    def stop_command(self):
+        return commands2.InstantCommand(self.motor.stopMotor, self)
 
     def intake_command(self):
-        return commands2.InstantCommand(self.intake).withTimeout(1).andThen(self.stop)
+        return commands2.RunCommand(self.intake, self)
 
     def outtake_command(self):
-        return commands2.InstantCommand(self.outtake).withTimeout(1).andThen(self.stop)
+        return commands2.RunCommand(self.outtake, self)
