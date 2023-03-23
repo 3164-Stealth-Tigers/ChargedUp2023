@@ -72,9 +72,6 @@ class ReachTargetCommand(commands2.CommandBase):
         self.arm.pivot.rotate_to(desired_arm_angle)
         self.arm.extend_distance(desired_extension)
 
-    def isFinished(self) -> bool:
-        return self.arm.pivot.at_goal() and self.arm.winch.at_setpoint()
-
 
 class ReachNearestTargetCommand(ReachTargetCommand):
     class TargetHeight(enum.Enum):
