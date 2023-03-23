@@ -131,7 +131,6 @@ class RobotDimensions:
     PIVOT_TO_FLOOR = (15 * u.inch).m_as(u.m)
     PIVOT_TO_MAX_VERTICAL_EXTENSION = (63 * u.inch).m_as(u.m)
     PIVOT_TO_MAX_HORIZONTAL_EXTENSION = (63 * u.inch).m_as(u.m)
-    # TODO: Find real value
 
     # To end of fully extended claw
     MAX_EXTENSION_FROM_PIVOT = (65.5 * u.inch).m_as(u.m)

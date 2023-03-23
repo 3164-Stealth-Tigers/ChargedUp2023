@@ -174,8 +174,7 @@ class ArmWinch(commands2.SubsystemBase):
 
     @property
     def extension(self) -> float:
-        """The extension in metres"""
-        # TODO: Make extension from pivot rather than from first stage
+        """The extension from the pivot in metres"""
         return self.encoder.getPosition()
 
     def reset_distance(self):
@@ -184,7 +183,7 @@ class ArmWinch(commands2.SubsystemBase):
 
 class ArmStructure(commands2.SubsystemBase):
     """
-    A structure that combines the winch and joint components. Instantiate this instead of the components seperately.
+    A structure that combines the winch and joint components. Instantiate this instead of the components separately.
     """
 
     def __init__(self):
