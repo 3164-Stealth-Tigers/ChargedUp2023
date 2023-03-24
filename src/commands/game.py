@@ -101,6 +101,24 @@ class ReachNearestTargetCommand(ReachTargetCommand):
         super().execute()
 
 
+class ReachRobotRelativePosition(ReachTargetCommand):
+    # TODO: Improve reliability by removing unnecessary use of global robot pose
+    def __init__(self, transform_from_robot: Transform3d, swerve: swervelib.Swerve, arm_: ArmStructure):
+        ReachTargetCommand.__init__(self, self.calculate_translation(), swerve, arm_)
+
+        self.swerve = swerve
+        self.arm = arm_
+        self.transform = transform_from_robot
+
+    def execute(self) -> None:
+        self.target = self.calculate_translation()
+        super().execute()
+
+    def calculate_translation(self):
+        robot_pose_3d = Pose3d(self.swerve.pose)
+        return robot_pose_3d.transformBy(self.transform).translation()
+
+
 class AlignToGridCommand(commands2.CommandBase):
     def __init__(
         self,

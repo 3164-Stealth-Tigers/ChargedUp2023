@@ -62,6 +62,14 @@ class RobotContainer:
                 ReachNearestTargetCommand(ReachNearestTargetCommand.TargetHeight.TOP, self.swerve, self.arm),
                 run_first_command_on_init=False,
             )
+            """
+            self.arm_cycle_cmd = CycleCommand(
+                self.arm.rotate_and_extend_command(wpimath.geometry.Rotation2d(), 0),
+                self.arm.rotate_and_extend_command(wpimath.geometry.Rotation2d(), 0),
+                self.arm.rotate_and_extend_command(wpimath.geometry.Rotation2d(), 0),
+                run_first_command_on_init=False,
+            )
+            """
             self.arm_cycle_cmd.addRequirements(self.arm)
 
             # TODO: Add multiplier for delta position
@@ -88,6 +96,7 @@ class RobotContainer:
         """Bind buttons on the Xbox controllers to run Commands"""
         self.driver_stick.balance.whileTrue(BalanceCommand(self.swerve))
         self.driver_stick.reset_gyro.onTrue(commands2.InstantCommand(self.swerve.zero_heading))
+
         # TODO: Test on real robot
         self.driver_stick.align.whileTrue(
             AlignToGridCommand(

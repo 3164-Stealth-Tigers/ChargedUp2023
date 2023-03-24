@@ -49,20 +49,19 @@ class ArmPivot(commands2.SubsystemBase):
 
     def _config_motors(self):
         self.leader.restoreFactoryDefaults()
+        self.leader.setSmartCurrentLimit(80)
+        self.leader.setIdleMode(rev.CANSparkMax.IdleMode.kBrake)
+
         self.follower.restoreFactoryDefaults()
+        self.follower.setSmartCurrentLimit(80)
+        self.follower.setIdleMode(rev.CANSparkMax.IdleMode.kBrake)
 
         self.controller.setP(0)
         self.controller.setI(0)
         self.controller.setD(0)
         self.controller.setFF(0)
 
-        self.leader.setSmartCurrentLimit(80)
-        self.follower.setSmartCurrentLimit(80)
-
         self.controller.setOutputRange(PivotConstants.MIN_OUTPUT, PivotConstants.MAX_OUTPUT)
-
-        self.leader.setIdleMode(rev.CANSparkMax.IdleMode.kBrake)
-        self.follower.setIdleMode(rev.CANSparkMax.IdleMode.kBrake)
 
         self.encoder.setPositionConversionFactor(360 / PivotConstants.GEARING)
         self.encoder.setPosition(0)
@@ -260,6 +259,14 @@ class ArmStructure(commands2.SubsystemBase):
                 commands2.RunCommand(lambda: self.pivot.rotate_to(Rotation2d.fromDegrees(90)), self.pivot)
             ).until(self.pivot.at_goal)
         )
+
+    def rotate_and_extend_command(self, angle: Rotation2d, distance: float):
+        cmd = commands2.ParallelCommandGroup(
+            commands2.RunCommand(lambda: self.pivot.rotate_to(angle)),
+            commands2.RunCommand(lambda: self.extend_distance(distance)),
+        ).until(lambda: self.pivot.at_goal() and self.winch.at_setpoint())
+        cmd.addRequirements(self)
+        return cmd
 
 
 def angle_to(target: Translation3d, robot_translation: Translation3d) -> Rotation2d:
