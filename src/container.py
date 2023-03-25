@@ -81,7 +81,7 @@ class RobotContainer:
             # TODO: Add multiplier for delta position
             self.arm.setDefaultCommand(
                 self.arm_cycle_cmd.alongWith(
-                    self.arm.manual_pivot_position_command(lambda: self.operator_stick.pivot() * 0.2),
+                    self.arm.manual_pivot_position_command(lambda: self.operator_stick.pivot() * 1),
                     self.arm.manual_winch_position_command(lambda: self.operator_stick.extend() * 1),
                 )
             )

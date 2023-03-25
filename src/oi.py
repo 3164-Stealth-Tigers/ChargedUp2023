@@ -54,6 +54,11 @@ class DriverActionSet(Protocol):
         """Align with the nearest scoring field element"""
         raise NotImplementedError
 
+    @property
+    @abstractmethod
+    def pizza_stop(self) -> Trigger:
+        raise NotImplementedError
+
 
 class OperatorActionSet(Protocol):
     @abstractmethod
@@ -160,14 +165,20 @@ class XboxDriver(DriverActionSet):
 
     @property
     def balance(self) -> Trigger:
-        return self.stick.X()
+        return Trigger()
+        # return self.stick.X()
 
     @property
     def reset_gyro(self) -> Trigger:
-        return self.stick.Y()
+        return self.stick.start()
 
     @property
     def align(self) -> Trigger:
+        return Trigger()
+        # return self.stick.Y()
+
+    @property
+    def pizza_stop(self) -> Trigger:
         return self.stick.Y()
 
 
@@ -206,11 +217,11 @@ class XboxOperator(OperatorActionSet):
 
     @property
     def intake(self) -> Trigger:
-        return self.stick.A()
+        return self.stick.leftBumper()
 
     @property
     def outtake(self) -> Trigger:
-        return self.stick.B()
+        return self.stick.leftTrigger(0.2)
 
     @property
     def cycle_next_height(self) -> Trigger:

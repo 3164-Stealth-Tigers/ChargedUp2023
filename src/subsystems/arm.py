@@ -49,11 +49,12 @@ class ArmPivot(commands2.SubsystemBase):
 
     def _config_motors(self):
         self.leader.restoreFactoryDefaults()
-        self.leader.setSmartCurrentLimit(40)
+        self.leader.setSmartCurrentLimit(60)
         self.leader.setIdleMode(rev.CANSparkMax.IdleMode.kBrake)
+        # self.leader.enableVoltageCompensation(2.4)
 
         self.follower.restoreFactoryDefaults()
-        self.follower.setSmartCurrentLimit(40)
+        self.follower.setSmartCurrentLimit(60)
         self.follower.setIdleMode(rev.CANSparkMax.IdleMode.kBrake)
 
         self.controller.setP(0)
