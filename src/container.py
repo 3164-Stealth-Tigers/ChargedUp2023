@@ -3,7 +3,13 @@ import wpilib
 import wpimath.geometry
 import wpimath.trajectory
 
-from commands.game import BalanceCommand, VisualizeTargetCommand, AlignToGridCommand, ReachNearestTargetCommand
+from commands.game import (
+    BalanceCommand,
+    VisualizeTargetCommand,
+    AlignToGridCommand,
+    ReachNearestTargetCommand,
+    LiftArmCommand,
+)
 from commands.factories import CycleCommand
 from subsystems.arm import ArmStructure
 from subsystems.claw import Claw
@@ -53,7 +59,7 @@ class RobotContainer:
         # Run either the position or direct power commands... not both
         if ARM_POWER_TEST:
             self.arm_cycle_cmd = Dummy()
-            self.arm.pivot.setDefaultCommand(self.arm.manual_pivot_power_command(self.operator_stick.pivot))
+            self.arm.pivot.setDefaultCommand(LiftArmCommand(self.operator_stick.pivot, self.arm))
             self.arm.winch.setDefaultCommand(self.arm.manual_winch_power_command(self.operator_stick.extend))
         else:
             self.arm_cycle_cmd = CycleCommand(
@@ -75,7 +81,7 @@ class RobotContainer:
             # TODO: Add multiplier for delta position
             self.arm.setDefaultCommand(
                 self.arm_cycle_cmd.alongWith(
-                    self.arm.manual_pivot_position_command(lambda: self.operator_stick.pivot() * 1),
+                    self.arm.manual_pivot_position_command(lambda: self.operator_stick.pivot() * 0.2),
                     self.arm.manual_winch_position_command(lambda: self.operator_stick.extend() * 1),
                 )
             )
@@ -94,7 +100,7 @@ class RobotContainer:
 
     def configure_button_bindings(self):
         """Bind buttons on the Xbox controllers to run Commands"""
-        self.driver_stick.balance.whileTrue(BalanceCommand(self.swerve))
+        self.driver_stick.balance.whileTrue(BalanceCommand(self.swerve, self.arm))
         self.driver_stick.reset_gyro.onTrue(commands2.InstantCommand(self.swerve.zero_heading))
 
         # TODO: Test on real robot

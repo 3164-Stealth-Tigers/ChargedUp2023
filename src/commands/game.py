@@ -3,6 +3,7 @@ import functools
 import json
 import math
 import pathlib
+from collections.abc import Callable
 
 import commands2
 import wpilib
@@ -169,10 +170,11 @@ class AlignToGridCommand(commands2.CommandBase):
 
 
 class BalanceCommand(commands2.CommandBase):
-    def __init__(self, swerve: swervelib.Swerve):
+    def __init__(self, swerve: swervelib.Swerve, arm_: ArmStructure):
         commands2.CommandBase.__init__(self)
 
         self.swerve = swerve
+        self.arm = arm_
 
         self.controller = wpimath.controller.PIDController(AutoConstants.BALANCE_kP, 0, 0)
         self.controller.setSetpoint(0)
@@ -185,8 +187,50 @@ class BalanceCommand(commands2.CommandBase):
         wpilib.SmartDashboard.putNumber("Balance PID Output", output)
         self.swerve.drive(Translation2d(output, 0) * self.swerve.swerve_params.max_speed, 0, False, True)
 
+        # Keep the arm upward relative to the floor
+        angle = Rotation2d.fromDegrees(90) - self.swerve.pitch
+        self.arm.pivot.rotate_to(angle)
+
     def end(self, interrupted: bool) -> None:
         self.swerve.drive(Translation2d(0, 0), 0, False, True)
+
+
+class LiftArmCommand(commands2.CommandBase):
+    # TODO: Make work with arm on both sides of robot
+    class State(enum.Enum):
+        OFF = enum.auto()
+        FALLING = enum.auto()
+        RUNNING = enum.auto()
+
+    def __init__(self, power: Callable[[], float], arm_: ArmStructure):
+        commands2.CommandBase.__init__(self)
+        self.power = power
+        self.pivot = arm_.pivot
+        self.state = self.State.OFF
+        self.timer = wpilib.Timer()
+        self.addRequirements(self.pivot)
+
+    def initialize(self) -> None:
+        self.state = self.State.OFF
+
+    def execute(self) -> None:
+        power = self.power()
+        wpilib.SmartDashboard.putString("LiftArmCommand Mode", self.state.name)
+        if self.state is self.State.OFF:
+            self.pivot.set_power(0)
+            if power != 0:
+                self.state = self.State.RUNNING
+        elif self.state is self.State.RUNNING:
+            self.pivot.set_power(-0.05 + power)
+            if power == 0:
+                self.state = self.State.FALLING
+                self.timer.restart()
+        elif self.state is self.State.FALLING:
+            self.pivot.set_power(-0.05)
+            if power != 0:
+                self.state = self.State.RUNNING
+            elif self.timer.hasElapsed(3):
+                self.state = self.State.OFF
 
 
 @functools.cache
