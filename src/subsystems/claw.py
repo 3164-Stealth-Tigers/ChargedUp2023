@@ -20,6 +20,7 @@ class Claw(commands2.SubsystemBase):
     def _config_motors(self):
         self.motor.setSmartCurrentLimit(10)
         self.motor.setIdleMode(rev.CANSparkMax.IdleMode.kBrake)
+        self.motor.setOpenLoopRampRate(0.5)
 
     def periodic(self) -> None:
         pass

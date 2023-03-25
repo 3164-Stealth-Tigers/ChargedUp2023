@@ -146,6 +146,7 @@ class RobotContainer:
 
     def add_autonomous_routines(self):
         """Add routines to the autonomous picker"""
+        """
         trajectory = wpimath.trajectory.TrajectoryGenerator.generateTrajectory(
             wpimath.geometry.Pose2d(0, 0, 0),
             [],
@@ -159,6 +160,17 @@ class RobotContainer:
         )
         self.chooser.setDefaultOption(
             "Trajectory Test", self.swerve.follow_trajectory_command(trajectory, True, theta_constraints)
+        )
+        """
+        self.chooser.setDefaultOption("None", commands2.InstantCommand())
+        self.chooser.addOption(
+            "fwd",
+            commands2.SequentialCommandGroup(
+                commands2.RunCommand(
+                    lambda: self.swerve.drive(wpimath.geometry.Translation2d(0.5, 0), 0, False, True)
+                ).withTimeout(3.04),
+                self.swerve.ski_stop_command(),
+            ),
         )
 
     def get_field_tests(self) -> list[TestCommand]:
