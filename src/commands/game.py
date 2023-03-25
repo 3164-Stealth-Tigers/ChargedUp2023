@@ -9,6 +9,7 @@ import commands2
 import wpilib
 import wpimath.trajectory
 import wpimath.controller
+import wpimath.filter
 from wpimath.geometry import (
     Translation3d,
     Transform3d,
@@ -208,6 +209,7 @@ class LiftArmCommand(commands2.CommandBase):
         self.pivot = arm_.pivot
         self.state = self.State.OFF
         self.timer = wpilib.Timer()
+        self.ramp = wpimath.filter.SlewRateLimiter(0.025, -0.05)
         self.addRequirements(self.pivot)
 
     def initialize(self) -> None:
@@ -225,8 +227,9 @@ class LiftArmCommand(commands2.CommandBase):
             if power == 0:
                 self.state = self.State.FALLING
                 self.timer.restart()
+                self.ramp.reset(-0.05)
         elif self.state is self.State.FALLING:
-            self.pivot.set_power(-0.05)
+            self.pivot.set_power(self.ramp.calculate(0))
             if power != 0:
                 self.state = self.State.RUNNING
             elif self.timer.hasElapsed(3):
