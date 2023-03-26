@@ -151,22 +151,21 @@ class XboxDriver(DriverActionSet):
 
     def forward(self) -> float:
         """The robot's movement along the X axis, controlled by moving the left joystick up and down. From -1 to 1"""
-        return -self.stick.getLeftY() * 1
+        return deadband(-self.stick.getLeftY(), 0.08)
 
     def strafe(self) -> float:
         """The robot's movement along the Y axis, controlled by moving the left joystick left and right. From -1 to 1"""
-        return -self.stick.getLeftX() * 1
+        return deadband(-self.stick.getLeftX(), 0.08)
 
     def turn(self) -> float:
         """The robot's movement around the Z axis, controlled by moving the right joystick left and right.
         From -1 to 1, CCW+
         """
-        return -self.stick.getRightX() * 1
+        return deadband(-self.stick.getRightX(), 0.08) * 0.6
 
     @property
     def balance(self) -> Trigger:
-        return Trigger()
-        # return self.stick.X()
+        return self.stick.X()
 
     @property
     def reset_gyro(self) -> Trigger:
@@ -194,7 +193,7 @@ class XboxOperator(OperatorActionSet):
         self.loop = commands2.CommandScheduler.getInstance().getDefaultButtonLoop()
 
     def pivot(self) -> float:
-        return self.stick.getRightTriggerAxis() - self.stick.getLeftTriggerAxis()
+        return -self.stick.getRightY()
 
     def extend(self) -> float:
         return -self.stick.getLeftY()
@@ -244,12 +243,15 @@ class XboxOperator(OperatorActionSet):
         return self.stick.back()
 
 
-class LabTestXboxOperator(XboxOperator):
-    def pivot(self) -> float:
-        return deadband(-self.stick.getRightY(), 0.01)
+class SlowXboxDriver(XboxDriver):
+    def forward(self) -> float:
+        return super().forward() * 0.2
 
-    def extend(self) -> float:
-        return deadband(super().extend(), 0.01)
+    def strafe(self) -> float:
+        return super().strafe() * 0.2
+
+    def turn(self) -> float:
+        return super().turn() * 0.2
 
 
 def deadband(value, band):

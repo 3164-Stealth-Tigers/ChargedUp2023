@@ -16,7 +16,7 @@ from subsystems.claw import Claw
 from swervelib import Swerve
 
 from map import DrivetrainConstants, VISION_PARAMS
-from oi import XboxDriver, XboxOperator, LabTestXboxOperator
+from oi import XboxDriver, XboxOperator, SlowXboxDriver
 from swervelib.dummy import Dummy
 from tests import *
 
@@ -42,7 +42,7 @@ class RobotContainer:
         # Joysticks are plugged into the driver laptop and used during the teleop period to control the robot
         # Each joystick is plugged into a port, ranging from 0 to 5
         self.driver_stick = XboxDriver(0)
-        self.operator_stick = LabTestXboxOperator(1)
+        self.operator_stick = XboxOperator(1)
 
         # Default commands run whenever no other commands are scheduled
         # This included the teleop period, so code for teleop control should be set as the default command
@@ -102,6 +102,7 @@ class RobotContainer:
         """Bind buttons on the Xbox controllers to run Commands"""
         self.driver_stick.balance.whileTrue(BalanceCommand(self.swerve, self.arm))
         self.driver_stick.reset_gyro.onTrue(commands2.InstantCommand(self.swerve.zero_heading))
+        self.driver_stick.pizza_stop.onTrue(self.swerve.ski_stop_command())
 
         # TODO: Test on real robot
         self.driver_stick.align.whileTrue(
@@ -167,7 +168,7 @@ class RobotContainer:
             "fwd",
             commands2.SequentialCommandGroup(
                 commands2.RunCommand(
-                    lambda: self.swerve.drive(wpimath.geometry.Translation2d(0.5, 0), 0, False, True)
+                    lambda: self.swerve.drive(wpimath.geometry.Translation2d(0.8, 0), 0, False, True)
                 ).withTimeout(3.04),
                 self.swerve.ski_stop_command(),
             ),

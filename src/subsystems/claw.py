@@ -18,18 +18,18 @@ class Claw(commands2.SubsystemBase):
         wpilib.SmartDashboard.putData("Claw Distance Sensor", self.distance_sense)
 
     def _config_motors(self):
-        self.motor.setSmartCurrentLimit(10)
+        self.motor.setSmartCurrentLimit(20)
         self.motor.setIdleMode(rev.CANSparkMax.IdleMode.kBrake)
-        self.motor.setOpenLoopRampRate(0.5)
+        self.motor.setOpenLoopRampRate(0)
 
     def periodic(self) -> None:
         pass
 
     def intake(self):
-        self.motor.set(1)
+        self.motor.set(-0.3)
 
     def outtake(self):
-        self.motor.set(-1)
+        self.motor.set(1)
 
     def stop_command(self):
         return commands2.InstantCommand(self.motor.stopMotor, self)
