@@ -13,9 +13,8 @@ from typing import Protocol
 from abc import abstractmethod
 
 import commands2
-import wpilib
 from commands2 import Trigger
-from commands2.button import CommandXboxController, JoystickButton
+from commands2.button import CommandXboxController
 
 
 # Action Sets
@@ -52,6 +51,18 @@ class DriverActionSet(Protocol):
     @abstractmethod
     def align(self) -> Trigger:
         """Align with the nearest scoring field element"""
+        raise NotImplementedError
+
+    @property
+    @abstractmethod
+    def toggle_field_relative(self) -> Trigger:
+        """Toggle field-relative control on or off"""
+        raise NotImplementedError
+
+    @property
+    @abstractmethod
+    def ski_stop(self) -> Trigger:
+        """Turn the wheels to an 'X' shape"""
         raise NotImplementedError
 
 
@@ -160,14 +171,22 @@ class XboxDriver(DriverActionSet):
 
     @property
     def balance(self) -> Trigger:
-        return self.stick.X()
+        return Trigger(lambda: False)
 
     @property
     def reset_gyro(self) -> Trigger:
-        return self.stick.Y()
+        return self.stick.start()
 
     @property
     def align(self) -> Trigger:
+        return Trigger(lambda: False)
+
+    @property
+    def toggle_field_relative(self) -> Trigger:
+        return self.stick.back()    # PS4 Button 9
+
+    @property
+    def ski_stop(self) -> Trigger:
         return self.stick.Y()
 
 
@@ -183,10 +202,10 @@ class XboxOperator(OperatorActionSet):
         self.loop = commands2.CommandScheduler.getInstance().getDefaultButtonLoop()
 
     def pivot(self) -> float:
-        return self.stick.getRightTriggerAxis() - self.stick.getLeftTriggerAxis()
+        return deadband(-self.stick.getRightY(), 0.01)
 
     def extend(self) -> float:
-        return -self.stick.getLeftY()
+        return deadband(-self.stick.getLeftY(), 0.01)
 
     @property
     def reach_high(self) -> Trigger:
@@ -231,14 +250,6 @@ class XboxOperator(OperatorActionSet):
     @property
     def reset_winch_extension(self) -> Trigger:
         return self.stick.back()
-
-
-class LabTestXboxOperator(XboxOperator):
-    def pivot(self) -> float:
-        return deadband(-self.stick.getRightY(), 0.01)
-
-    def extend(self) -> float:
-        return deadband(super().extend(), 0.01)
 
 
 def deadband(value, band):

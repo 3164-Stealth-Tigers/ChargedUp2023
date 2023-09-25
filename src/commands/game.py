@@ -19,7 +19,7 @@ from wpimath.geometry import (
     Transform2d,
 )
 
-import swervelib
+import swervelib.impl
 from map import AutoConstants, RobotDimensions
 from swervelib import u
 from subsystems import arm
@@ -27,7 +27,7 @@ from subsystems.arm import ArmStructure
 
 
 class VisualizeTargetCommand(commands2.CommandBase):
-    def __init__(self, swerve: swervelib.Swerve):
+    def __init__(self, swerve: swervelib.impl.SwerveDrive):
         commands2.CommandBase.__init__(self)
 
         self.swerve = swerve
@@ -53,7 +53,7 @@ class VisualizeTargetCommand(commands2.CommandBase):
 
 
 class ReachTargetCommand(commands2.CommandBase):
-    def __init__(self, target: Translation3d, swerve: swervelib.Swerve, arm_: ArmStructure):
+    def __init__(self, target: Translation3d, swerve: swervelib.impl.SwerveDrive, arm_: ArmStructure):
         commands2.CommandBase.__init__(self)
 
         self.target = target
@@ -80,7 +80,7 @@ class ReachNearestTargetCommand(ReachTargetCommand):
         MID = Transform3d(Translation3d((21.87 * u.inch).m_as(u.m), 0, (34.065 * u.inch).m_as(u.m)), Rotation3d())
         TOP = Transform3d(Translation3d((38.896 * u.inch).m_as(u.m), 0, (46.065 * u.inch).m_as(u.m)), Rotation3d())
 
-    def __init__(self, height: TargetHeight, swerve: swervelib.Swerve, arm_: ArmStructure):
+    def __init__(self, height: TargetHeight, swerve: swervelib.impl.SwerveDrive, arm_: ArmStructure):
         ReachTargetCommand.__init__(self, Translation3d(), swerve, arm_)
 
         self.offset = height.value
@@ -104,7 +104,7 @@ class ReachNearestTargetCommand(ReachTargetCommand):
 class AlignToGridCommand(commands2.CommandBase):
     def __init__(
         self,
-        swerve: swervelib.Swerve,
+        swerve: swervelib.impl.SwerveDrive,
         trajectory_config: wpimath.trajectory.TrajectoryConfig,
         theta_controller_constraints: wpimath.trajectory.TrapezoidProfileRadians.Constraints,
     ):
@@ -133,6 +133,7 @@ class AlignToGridCommand(commands2.CommandBase):
             target_pose,
             self.trajectory_config,
         )
+        # TODO: Re-impl field object and trajectory following
         self.swerve.field.getObject("traj").setTrajectory(trajectory)
 
         self.inner_command = self.swerve.follow_trajectory_command(trajectory, True, self.theta_controller_constraints)
@@ -151,7 +152,7 @@ class AlignToGridCommand(commands2.CommandBase):
 
 
 class BalanceCommand(commands2.CommandBase):
-    def __init__(self, swerve: swervelib.Swerve):
+    def __init__(self, swerve: swervelib.impl.SwerveDrive):
         commands2.CommandBase.__init__(self)
 
         self.swerve = swerve
@@ -161,6 +162,7 @@ class BalanceCommand(commands2.CommandBase):
         wpilib.SmartDashboard.putData("Balance PID", self.controller)
 
     def execute(self) -> None:
+        # TODO: Re-impl full IMU access
         pitch = self.swerve.pitch.degrees()
         pitch = clamp(pitch, AutoConstants.BALANCE_MAX_EFFORT, -AutoConstants.BALANCE_MAX_EFFORT)
         output = self.controller.calculate(pitch)
