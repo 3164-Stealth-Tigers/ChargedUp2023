@@ -3,6 +3,7 @@ import wpilib
 
 from subsystems.arm import ArmStructure
 from subsystems.claw import Claw
+from commands.game import LiftArmCommand
 
 from map import DrivetrainConstants
 from oi import XboxDriver, XboxOperator
@@ -47,7 +48,7 @@ class RobotContainer:
         self.swerve.setDefaultCommand(self.swerve_teleop_cmd)
         wpilib.SmartDashboard.putData("Swerve TeleOp Command", self.swerve_teleop_cmd)
 
-        self.arm.pivot.setDefaultCommand(self.arm.manual_pivot_power_command(self.operator_stick.pivot))
+        self.arm.pivot.setDefaultCommand(LiftArmCommand(self.operator_stick.pivot, self.arm))
         self.arm.winch.setDefaultCommand(self.arm.manual_winch_power_command(self.operator_stick.extend))
 
         # Bind buttons to Commands
@@ -64,7 +65,7 @@ class RobotContainer:
 
     def configure_button_bindings(self):
         """Bind buttons on the Xbox controllers to run Commands"""
-        # self.driver_stick.balance.whileTrue(BalanceCommand(self.swerve))
+        # self.driver_stick.balance.whileTrue(BalanceCommand(self.swerve, self.arm))
         self.driver_stick.reset_gyro.onTrue(commands2.InstantCommand(self.swerve.zero_heading))
         self.driver_stick.toggle_field_relative.onTrue(
             commands2.InstantCommand(self.swerve_teleop_cmd.toggle_field_relative)

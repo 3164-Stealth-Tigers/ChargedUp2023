@@ -3,11 +3,13 @@ import functools
 import json
 import math
 import pathlib
+from collections.abc import Callable
 
 import commands2
 import wpilib
 import wpimath.trajectory
 import wpimath.controller
+import wpimath.filter
 from wpimath.geometry import (
     Translation3d,
     Transform3d,
@@ -101,6 +103,24 @@ class ReachNearestTargetCommand(ReachTargetCommand):
         super().execute()
 
 
+class ReachRobotRelativePosition(ReachTargetCommand):
+    # TODO: Improve reliability by removing unnecessary use of global robot pose
+    def __init__(self, transform_from_robot: Transform3d, swerve: swervelib.Swerve, arm_: ArmStructure):
+        ReachTargetCommand.__init__(self, self.calculate_translation(), swerve, arm_)
+
+        self.swerve = swerve
+        self.arm = arm_
+        self.transform = transform_from_robot
+
+    def execute(self) -> None:
+        self.target = self.calculate_translation()
+        super().execute()
+
+    def calculate_translation(self):
+        robot_pose_3d = Pose3d(self.swerve.pose)
+        return robot_pose_3d.transformBy(self.transform).translation()
+
+
 class AlignToGridCommand(commands2.CommandBase):
     def __init__(
         self,
@@ -152,10 +172,11 @@ class AlignToGridCommand(commands2.CommandBase):
 
 
 class BalanceCommand(commands2.CommandBase):
-    def __init__(self, swerve: swervelib.impl.SwerveDrive):
+    def __init__(self, swerve: swervelib.impl.SwerveDrive, arm_: ArmStructure):
         commands2.CommandBase.__init__(self)
 
         self.swerve = swerve
+        self.arm = arm_
 
         self.controller = wpimath.controller.PIDController(AutoConstants.BALANCE_kP, 0, 0)
         self.controller.setSetpoint(0)
@@ -169,8 +190,52 @@ class BalanceCommand(commands2.CommandBase):
         wpilib.SmartDashboard.putNumber("Balance PID Output", output)
         self.swerve.drive(Translation2d(output, 0) * self.swerve.swerve_params.max_speed, 0, False, True)
 
+        # Keep the arm upward relative to the floor
+        angle = Rotation2d.fromDegrees(90) - self.swerve.pitch
+        self.arm.pivot.rotate_to(angle)
+
     def end(self, interrupted: bool) -> None:
         self.swerve.drive(Translation2d(0, 0), 0, False, True)
+
+
+class LiftArmCommand(commands2.CommandBase):
+    # TODO: Make work with arm on both sides of robot
+    class State(enum.Enum):
+        OFF = enum.auto()
+        FALLING = enum.auto()
+        RUNNING = enum.auto()
+
+    def __init__(self, power: Callable[[], float], arm_: ArmStructure):
+        commands2.CommandBase.__init__(self)
+        self.power = power
+        self.pivot = arm_.pivot
+        self.state = self.State.OFF
+        self.timer = wpilib.Timer()
+        self.ramp = wpimath.filter.SlewRateLimiter(0.025, -0.05)
+        self.addRequirements(self.pivot)
+
+    def initialize(self) -> None:
+        self.state = self.State.OFF
+
+    def execute(self) -> None:
+        power = self.power()
+        wpilib.SmartDashboard.putString("LiftArmCommand Mode", self.state.name)
+        if self.state is self.State.OFF:
+            self.pivot.set_power(0)
+            if power != 0:
+                self.state = self.State.RUNNING
+        elif self.state is self.State.RUNNING:
+            self.pivot.set_power(-0.05 + power)
+            if power == 0:
+                self.state = self.State.FALLING
+                self.timer.restart()
+                self.ramp.reset(-0.05)
+        elif self.state is self.State.FALLING:
+            self.pivot.set_power(self.ramp.calculate(0))
+            if power != 0:
+                self.state = self.State.RUNNING
+            elif self.timer.hasElapsed(3):
+                self.state = self.State.OFF
 
 
 @functools.cache

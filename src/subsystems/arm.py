@@ -49,20 +49,20 @@ class ArmPivot(commands2.SubsystemBase):
 
     def _config_motors(self):
         self.leader.restoreFactoryDefaults()
+        self.leader.setSmartCurrentLimit(70)
+        self.leader.setIdleMode(rev.CANSparkMax.IdleMode.kBrake)
+        # self.leader.enableVoltageCompensation(2.4)
+
         self.follower.restoreFactoryDefaults()
+        self.follower.setSmartCurrentLimit(70)
+        self.follower.setIdleMode(rev.CANSparkMax.IdleMode.kBrake)
 
         self.controller.setP(0)
         self.controller.setI(0)
         self.controller.setD(0)
         self.controller.setFF(0)
 
-        self.leader.setSmartCurrentLimit(80)
-        self.follower.setSmartCurrentLimit(80)
-
-        self.controller.setOutputRange(PivotConstants.MIN_OUTPUT, PivotConstants.MAX_OUTPUT)
-
-        self.leader.setIdleMode(rev.CANSparkMax.IdleMode.kBrake)
-        self.follower.setIdleMode(rev.CANSparkMax.IdleMode.kBrake)
+        # self.controller.setOutputRange(PivotConstants.MIN_OUTPUT, PivotConstants.MAX_OUTPUT)
 
         self.encoder.setPositionConversionFactor(360 / PivotConstants.GEARING)
         self.encoder.setPosition(0)
@@ -71,10 +71,9 @@ class ArmPivot(commands2.SubsystemBase):
 
     def periodic(self) -> None:
         wpilib.SmartDashboard.putString("Pivot Mode", self.mode.name)
-        wpilib.SmartDashboard.putNumber("Arm Bus Voltage", self.leader.getBusVoltage())
-        wpilib.SmartDashboard.putNumber(
-            "Pivot Output Voltage", self.leader.getAppliedOutput() * self.leader.getBusVoltage()
-        )
+        wpilib.SmartDashboard.putNumber("Pivot Leader Output Current (amps)", self.leader.getOutputCurrent())
+        wpilib.SmartDashboard.putNumber("Pivot Follower Output Current (amps)", self.follower.getOutputCurrent())
+        wpilib.SmartDashboard.putNumber("Pivot Output Voltage", self.follower.getAppliedOutput() * self.follower.getBusVoltage())
         wpilib.SmartDashboard.putNumber("Arm Rotation (deg)", self.angle.degrees())
 
         if self.mode is MechanismMode.POSITION:
@@ -219,8 +218,10 @@ class ArmStructure(commands2.SubsystemBase):
         self.winch.extend_distance(limited_extension)
 
     def toggle_brake(self):
+        print("hello wld")
         value = wpilib.Relay.Value.kOn if self.brake.get() == wpilib.Relay.Value.kOff else wpilib.Relay.Value.kOff
-        self.brake.set(value)
+        # self.brake.set(value)
+        self.brake.set(wpilib.Relay.Value.kOn)
 
     def manual_winch_power_command(self, power: Callable[[], float]):
         return commands2.RunCommand(lambda: self.winch.set_power(power()), self.winch).alongWith(
@@ -260,6 +261,14 @@ class ArmStructure(commands2.SubsystemBase):
                 commands2.RunCommand(lambda: self.pivot.rotate_to(Rotation2d.fromDegrees(90)), self.pivot)
             ).until(self.pivot.at_goal)
         )
+
+    def rotate_and_extend_command(self, angle: Rotation2d, distance: float):
+        cmd = commands2.ParallelCommandGroup(
+            commands2.RunCommand(lambda: self.pivot.rotate_to(angle)),
+            commands2.RunCommand(lambda: self.extend_distance(distance)),
+        ).until(lambda: self.pivot.at_goal() and self.winch.at_setpoint())
+        cmd.addRequirements(self)
+        return cmd
 
 
 def angle_to(target: Translation3d, robot_translation: Translation3d) -> Rotation2d:

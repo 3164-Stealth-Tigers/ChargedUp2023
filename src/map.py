@@ -62,22 +62,22 @@ class DrivetrainConstants:
     SWERVE_MODULES = [
         CoaxialSwerveModule(
             Falcon500CoaxialDriveComponent(4, DRIVE_PARAMS),
-            Falcon500CoaxialAzimuthComponent(3, Rotation2d.fromDegrees(329.5898), AZIMUTH_PARAMS, AbsoluteCANCoder(0)),
+            Falcon500CoaxialAzimuthComponent(3, Rotation2d.fromDegrees(331.435), AZIMUTH_PARAMS, AbsoluteCANCoder(0)),
             Translation2d(WHEEL_BASE / 2, TRACK_WIDTH / 2),
         ),
         CoaxialSwerveModule(
             Falcon500CoaxialDriveComponent(1, DRIVE_PARAMS),
-            Falcon500CoaxialAzimuthComponent(6, Rotation2d.fromDegrees(157.0605), AZIMUTH_PARAMS, AbsoluteCANCoder(1)),
+            Falcon500CoaxialAzimuthComponent(6, Rotation2d.fromDegrees(156.093), AZIMUTH_PARAMS, AbsoluteCANCoder(1)),
             Translation2d(WHEEL_BASE / 2, -TRACK_WIDTH / 2),
         ),
         CoaxialSwerveModule(
             Falcon500CoaxialDriveComponent(7, DRIVE_PARAMS),
-            Falcon500CoaxialAzimuthComponent(2, Rotation2d.fromDegrees(44.6484), AZIMUTH_PARAMS, AbsoluteCANCoder(2)),
+            Falcon500CoaxialAzimuthComponent(2, Rotation2d.fromDegrees(45.263), AZIMUTH_PARAMS, AbsoluteCANCoder(2)),
             Translation2d(-WHEEL_BASE / 2, TRACK_WIDTH / 2),
         ),
         CoaxialSwerveModule(
             Falcon500CoaxialDriveComponent(5, DRIVE_PARAMS),
-            Falcon500CoaxialAzimuthComponent(0, Rotation2d.fromDegrees(211.2890), AZIMUTH_PARAMS, AbsoluteCANCoder(3)),
+            Falcon500CoaxialAzimuthComponent(0, Rotation2d.fromDegrees(211.201), AZIMUTH_PARAMS, AbsoluteCANCoder(3)),
             Translation2d(-WHEEL_BASE / 2, -TRACK_WIDTH / 2),
         ),
     ]
