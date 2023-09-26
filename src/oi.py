@@ -183,7 +183,7 @@ class XboxDriver(DriverActionSet):
 
     @property
     def toggle_field_relative(self) -> Trigger:
-        return self.stick.back()    # PS4 Button 9
+        return self.stick.back()  # PS4 Button 9
 
     @property
     def ski_stop(self) -> Trigger:

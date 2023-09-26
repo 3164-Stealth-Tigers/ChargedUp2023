@@ -24,9 +24,6 @@ class DrivetrainConstants:
     MAX_VELOCITY = 4.00 * (u.m / u.s)
     MAX_ANGULAR_VELOCITY = 584 * (u.deg / u.s)
 
-    MAX_ACCELERATION = (6.5 * u.m / u.s).m  # Measured 6.6 m/s
-    MAX_ANGULAR_ACCELERATION = (75.5 * u.deg / u.s).m_as(u.rad / u.s)
-
     DRIVE_PARAMS = Falcon500CoaxialDriveComponent.Parameters(
         wheel_circumference=4 * math.pi * u.inch,
         gear_ratio=6.75 / 1,  # SDS Mk4i L2
