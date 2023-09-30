@@ -105,7 +105,7 @@ class ReachNearestTargetCommand(ReachTargetCommand):
 
 class ReachRobotRelativePosition(ReachTargetCommand):
     # TODO: Improve reliability by removing unnecessary use of global robot pose
-    def __init__(self, transform_from_robot: Transform3d, swerve: swervelib.Swerve, arm_: ArmStructure):
+    def __init__(self, transform_from_robot: Transform3d, swerve: swervelib.impl.SwerveDrive, arm_: ArmStructure):
         ReachTargetCommand.__init__(self, self.calculate_translation(), swerve, arm_)
 
         self.swerve = swerve

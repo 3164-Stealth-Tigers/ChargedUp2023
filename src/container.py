@@ -1,6 +1,7 @@
 import commands2.button
 import wpilib
 
+from commands.swerve import ski_stop_command
 from subsystems.arm import ArmStructure
 from subsystems.claw import Claw
 from commands.game import LiftArmCommand
@@ -70,6 +71,7 @@ class RobotContainer:
         self.driver_stick.toggle_field_relative.onTrue(
             commands2.InstantCommand(self.swerve_teleop_cmd.toggle_field_relative)
         )
+        self.driver_stick.ski_stop.onTrue(ski_stop_command(self.swerve).until(self.driver_stick.is_movement_commanded))
         # TODO: Re-impl ski stop
 
         self.operator_stick.intake.whileTrue(self.claw.intake_command()).onFalse(self.claw.stop_command())

@@ -65,6 +65,11 @@ class DriverActionSet(Protocol):
         """Turn the wheels to an 'X' shape"""
         raise NotImplementedError
 
+    @abstractmethod
+    def is_movement_commanded(self):
+        """Return True if drive base movement is desired"""
+        raise NotImplementedError
+
 
 class OperatorActionSet(Protocol):
     @abstractmethod
@@ -188,6 +193,9 @@ class XboxDriver(DriverActionSet):
     @property
     def ski_stop(self) -> Trigger:
         return self.stick.Y()
+
+    def is_movement_commanded(self):
+        return self.forward() + self.strafe() + self.turn() != 0
 
 
 class XboxOperator(OperatorActionSet):
