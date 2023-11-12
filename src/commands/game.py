@@ -29,7 +29,7 @@ from subsystems.arm import ArmStructure
 
 
 class VisualizeTargetCommand(commands2.CommandBase):
-    def __init__(self, swerve: swervelib.impl.SwerveDrive):
+    def __init__(self, swerve: swervelib.SwerveDrive):
         commands2.CommandBase.__init__(self)
 
         self.swerve = swerve
@@ -55,7 +55,7 @@ class VisualizeTargetCommand(commands2.CommandBase):
 
 
 class ReachTargetCommand(commands2.CommandBase):
-    def __init__(self, target: Translation3d, swerve: swervelib.impl.SwerveDrive, arm_: ArmStructure):
+    def __init__(self, target: Translation3d, swerve: swervelib.SwerveDrive, arm_: ArmStructure):
         commands2.CommandBase.__init__(self)
 
         self.target = target
@@ -82,7 +82,7 @@ class ReachNearestTargetCommand(ReachTargetCommand):
         MID = Transform3d(Translation3d((21.87 * u.inch).m_as(u.m), 0, (34.065 * u.inch).m_as(u.m)), Rotation3d())
         TOP = Transform3d(Translation3d((38.896 * u.inch).m_as(u.m), 0, (46.065 * u.inch).m_as(u.m)), Rotation3d())
 
-    def __init__(self, height: TargetHeight, swerve: swervelib.impl.SwerveDrive, arm_: ArmStructure):
+    def __init__(self, height: TargetHeight, swerve: swervelib.SwerveDrive, arm_: ArmStructure):
         ReachTargetCommand.__init__(self, Translation3d(), swerve, arm_)
 
         self.offset = height.value
@@ -105,7 +105,7 @@ class ReachNearestTargetCommand(ReachTargetCommand):
 
 class ReachRobotRelativePosition(ReachTargetCommand):
     # TODO: Improve reliability by removing unnecessary use of global robot pose
-    def __init__(self, transform_from_robot: Transform3d, swerve: swervelib.impl.SwerveDrive, arm_: ArmStructure):
+    def __init__(self, transform_from_robot: Transform3d, swerve: swervelib.SwerveDrive, arm_: ArmStructure):
         ReachTargetCommand.__init__(self, self.calculate_translation(), swerve, arm_)
 
         self.swerve = swerve
@@ -124,7 +124,7 @@ class ReachRobotRelativePosition(ReachTargetCommand):
 class AlignToGridCommand(commands2.CommandBase):
     def __init__(
         self,
-        swerve: swervelib.impl.SwerveDrive,
+        swerve: swervelib.SwerveDrive,
         trajectory_config: wpimath.trajectory.TrajectoryConfig,
         theta_controller_constraints: wpimath.trajectory.TrapezoidProfileRadians.Constraints,
     ):
@@ -172,7 +172,7 @@ class AlignToGridCommand(commands2.CommandBase):
 
 
 class BalanceCommand(commands2.CommandBase):
-    def __init__(self, swerve: swervelib.impl.SwerveDrive, arm_: ArmStructure):
+    def __init__(self, swerve: swervelib.SwerveDrive, arm_: ArmStructure):
         commands2.CommandBase.__init__(self)
 
         self.swerve = swerve

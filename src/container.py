@@ -1,5 +1,8 @@
 import commands2.button
 import wpilib
+from wpimath.geometry import Translation2d
+from swervelib import SwerveDrive
+from swervelib.impl import PigeonGyro
 
 from commands.swerve import ski_stop_command
 from subsystems.arm import ArmStructure
@@ -8,7 +11,6 @@ from commands.game import LiftArmCommand
 
 from map import DrivetrainConstants
 from oi import XboxDriver, XboxOperator
-from swervelib.impl import SwerveDrive, PigeonGyro
 from tests import *
 
 
@@ -72,7 +74,6 @@ class RobotContainer:
             commands2.InstantCommand(self.swerve_teleop_cmd.toggle_field_relative)
         )
         self.driver_stick.ski_stop.onTrue(ski_stop_command(self.swerve).until(self.driver_stick.is_movement_commanded))
-        # TODO: Re-impl ski stop
 
         self.operator_stick.intake.whileTrue(self.claw.intake_command()).onFalse(self.claw.stop_command())
         self.operator_stick.outtake.whileTrue(self.claw.outtake_command()).onFalse(self.claw.stop_command())
@@ -82,6 +83,15 @@ class RobotContainer:
 
     def add_autonomous_routines(self):
         """Add routines to the autonomous picker"""
+        # Drive forward 6.9 metres
+        drive_forward_auto = (
+            commands2.RunCommand(lambda: self.swerve.drive(Translation2d(1.3, 0), 0, False, False))
+            .withTimeout(3)
+            .andThen(lambda: self.swerve.drive(Translation2d(0, 0), 0, False, True))
+        )
+        self.chooser.setDefaultOption("Go Forward", drive_forward_auto)
+
+        self.chooser.addOption("Do Nothing", commands2.InstantCommand())
 
     def get_field_tests(self) -> list[TestCommand]:
         return [ExampleTest()]

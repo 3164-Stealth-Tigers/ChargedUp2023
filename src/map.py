@@ -15,7 +15,7 @@ from swervelib.impl import (
 
 
 class DrivetrainConstants:
-    FIELD_RELATIVE = False
+    FIELD_RELATIVE = True
     OPEN_LOOP = True
 
     TRACK_WIDTH = (24.75 * u.inch).m_as(u.m)
@@ -34,7 +34,8 @@ class DrivetrainConstants:
         peak_current_limit=60,
         peak_current_duration=0.01,
         neutral_mode=ctre.NeutralMode.Coast,
-        kP=0.12465,
+        # kP=0.12465,
+        kP=0.1,
         kI=0,
         kD=0,
         kS=0.16954 / 12,
@@ -80,7 +81,7 @@ class DrivetrainConstants:
     ]
 
     GYRO_PORT = 0
-    INVERT_GYRO = True
+    INVERT_GYRO = False
 
 
 class RobotDimensions:
